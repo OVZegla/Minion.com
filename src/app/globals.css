@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-rgb: 252 250 245;
+  --surface-rgb: 255 255 255;
+  --surface-2-rgb: 247 243 234;
+  --border-rgb: 236 229 214;
+  --text-rgb: 36 31 24;
+  --muted-rgb: 123 114 100;
+  --primary-rgb: 255 201 60;
+  --primary-hover-rgb: 247 189 31;
+  --primary-ink-rgb: 42 33 9;
+  --primary-soft-rgb: 255 246 220;
+  --primary-line-rgb: 242 223 165;
+  --accent-text-rgb: 138 101 0;
+  --danger-rgb: 217 83 79;
+  --danger-soft-rgb: 253 236 235;
+  --success-rgb: 47 158 107;
+  --success-soft-rgb: 231 246 238;
+}
+
+.dark {
+  --bg-rgb: 20 19 15;
+  --surface-rgb: 29 27 21;
+  --surface-2-rgb: 38 35 25;
+  --border-rgb: 52 48 31;
+  --text-rgb: 240 235 223;
+  --muted-rgb: 162 152 134;
+  --primary-rgb: 255 201 60;
+  --primary-hover-rgb: 255 214 98;
+  --primary-ink-rgb: 42 33 9;
+  --primary-soft-rgb: 50 42 21;
+  --primary-line-rgb: 74 63 32;
+  --accent-text-rgb: 255 208 84;
+  --danger-rgb: 240 138 134;
+  --danger-soft-rgb: 58 32 31;
+  --success-rgb: 110 211 164;
+  --success-soft-rgb: 28 49 41;
+}
+
+:root,
+.dark {
+  --bg: rgb(var(--bg-rgb));
+  --surface: rgb(var(--surface-rgb));
+  --surface-2: rgb(var(--surface-2-rgb));
+  --border: rgb(var(--border-rgb));
+  --text: rgb(var(--text-rgb));
+  --muted: rgb(var(--muted-rgb));
+  --primary: rgb(var(--primary-rgb));
+  --primary-hover: rgb(var(--primary-hover-rgb));
+  --primary-ink: rgb(var(--primary-ink-rgb));
+  --primary-soft: rgb(var(--primary-soft-rgb));
+  --primary-line: rgb(var(--primary-line-rgb));
+  --accent-text: rgb(var(--accent-text-rgb));
+  --danger: rgb(var(--danger-rgb));
+  --danger-soft: rgb(var(--danger-soft-rgb));
+  --success: rgb(var(--success-rgb));
+  --success-soft: rgb(var(--success-soft-rgb));
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Visible focus everywhere — accessibility requirement */
+:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+
+/* Discreet scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-[color:var(--primary-ink)] hover:bg-primary-hover;
+  }
+  .btn-soft {
+    @apply btn bg-surface2 text-ink hover:bg-primary-soft;
+  }
+  .btn-ghost {
+    @apply btn text-muted hover:bg-surface2 hover:text-ink;
+  }
+  .btn-outline {
+    @apply btn border border-line bg-surface text-ink hover:bg-surface2;
+  }
+  .btn-danger {
+    @apply btn bg-[color:var(--danger-soft)] text-[color:var(--danger)] hover:brightness-95;
+  }
+  .field {
+    @apply w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted/70 outline-none transition focus:border-primary-line focus:ring-2 focus:ring-primary/40;
+  }
+  .label {
+    @apply mb-1.5 block text-[13px] font-medium text-muted;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium;
+  }
+}
+
+/* Rich text rendered from stored blocks (plain text only, never raw HTML) */
+.prose-minion p {
+  margin: 0 0 0.5rem;
+  line-height: 1.65;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+}
+
+/* Portee de couleur de matiere : bascule automatique en mode sombre */
+.dark .sc {
+  --c-soft: var(--c-soft-dark);
+  --c-text: var(--c-text-dark);
+}

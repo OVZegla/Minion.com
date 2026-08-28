@@ -156,7 +156,14 @@ body {
   }
 }
 
-/* Portee de couleur de matiere : bascule automatique en mode sombre */
+/* Portee de couleur de matiere : bascule automatique en mode sombre.
+   Les variantes claires/sombres sont posees en inline par colorVars() ;
+   ces regles decident laquelle est active. */
+.sc {
+  --c-soft: var(--c-soft-light);
+  --c-text: var(--c-text-light);
+}
+
 .dark .sc {
   --c-soft: var(--c-soft-dark);
   --c-text: var(--c-text-dark);

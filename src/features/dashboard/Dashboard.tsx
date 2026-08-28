@@ -285,11 +285,7 @@ export function Dashboard() {
                         {isNow ? (
                           <span className="absolute -left-[7px] top-3 h-2 w-2 rounded-full bg-[color:var(--danger)] ring-4 ring-bg" />
                         ) : null}
-                        <EventChip
-                          occurrence={occurrence}
-                          subject={subject}
-                          onClick={undefined}
-                        />
+                        <EventChip occurrence={occurrence} subject={subject} showTime={false} />
                       </div>
                     </div>
                   </li>

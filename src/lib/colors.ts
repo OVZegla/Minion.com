@@ -39,16 +39,19 @@ export function colorTokens(key: string | undefined | null): ColorTokens {
 }
 
 /**
- * Variables CSS a poser en style inline : le composant utilise ensuite
- * `var(--c-solid)`, `var(--c-soft)`, `var(--c-text)`.
- * Les valeurs sombres sont appliquees par une regle `.dark` dediee (cf. globals via style tag).
+ * Variables CSS a poser en style inline sur un element portant la classe `.sc`.
+ *
+ * On n'ecrit JAMAIS `--c-soft` / `--c-text` en inline : une declaration inline
+ * l'emporterait sur la regle `.dark .sc`, et le mode sombre garderait les
+ * couleurs claires. On expose donc les deux variantes, et c'est la feuille de
+ * style qui choisit laquelle devient `--c-soft` / `--c-text`.
  */
 export function colorVars(key: string | undefined | null): React.CSSProperties {
   const c = colorTokens(key);
   return {
     ['--c-solid' as string]: c.solid,
-    ['--c-soft' as string]: c.soft,
-    ['--c-text' as string]: c.text,
+    ['--c-soft-light' as string]: c.soft,
+    ['--c-text-light' as string]: c.text,
     ['--c-soft-dark' as string]: c.softDark,
     ['--c-text-dark' as string]: c.textDark,
   } as React.CSSProperties;

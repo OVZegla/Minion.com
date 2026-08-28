@@ -141,24 +141,35 @@ export function parseQuickInput(
     }
   }
 
-  // ---- matiere : on cherche le nom ou le nom court, mot entier
+  // ---- matiere : on essaie plusieurs formes du nom, la plus longue d'abord
   let subjectId: string | null = null;
   let matchedSubjectName: string | null = null;
   const haystack = deaccent(working.toLowerCase());
-  const candidates = [...subjects].sort((a, b) => b.name.length - a.name.length);
-  for (const subject of candidates) {
-    for (const needle of [subject.name, subject.shortName]) {
-      if (!needle || needle.length < 3) continue;
-      const nd = deaccent(needle.toLowerCase());
-      const idx = haystack.indexOf(nd);
-      if (idx >= 0) {
-        subjectId = subject.id;
-        matchedSubjectName = subject.name;
-        working = working.slice(0, idx) + ' ' + working.slice(idx + nd.length);
-        break;
+
+  const candidates: { id: string; name: string; needle: string }[] = [];
+  for (const subject of subjects) {
+    for (const raw of [subject.name, subject.shortName]) {
+      if (!raw) continue;
+      // "Droit constitutionnel 1" -> aussi "Droit constitutionnel"
+      const trimmed = raw.replace(/\s+\d+$/, '').replace(/\.$/, '').trim();
+      for (const needle of new Set([raw, trimmed])) {
+        if (needle.length >= 4) {
+          candidates.push({ id: subject.id, name: subject.name, needle });
+        }
       }
     }
-    if (subjectId) break;
+  }
+  candidates.sort((a, b) => b.needle.length - a.needle.length);
+
+  for (const candidate of candidates) {
+    const needle = deaccent(candidate.needle.toLowerCase());
+    const index = haystack.indexOf(needle);
+    if (index >= 0) {
+      subjectId = candidate.id;
+      matchedSubjectName = candidate.name;
+      working = working.slice(0, index) + ' ' + working.slice(index + needle.length);
+      break;
+    }
   }
 
   const title = working

@@ -18,7 +18,7 @@ import { useEvents, useSettings, useSubjectMap } from '@/hooks/data';
 import { useUi } from '@/components/layout/AppProviders';
 import {
   fmtDayFull,
-  fmtDayLong,
+  fmtDayShort,
   fmtMonthYear,
   minutesOfDay,
   todayISO,
@@ -50,7 +50,7 @@ export default function CalendarPage() {
 
   const weekDays = useMemo(() => {
     const start = weekStart(cursor);
-    return Array.from({ length: 6 }, (_, index) => addDays(start, index));
+    return Array.from({ length: 7 }, (_, index) => addDays(start, index));
   }, [cursor]);
 
   const monthGrid = useMemo(() => {
@@ -76,7 +76,7 @@ export default function CalendarPage() {
       ? fmtMonthYear(cursor)
       : view === 'jour'
         ? fmtDayFull(cursor)
-        : `${toDateISO(weekStart(cursor)).slice(8)} – ${fmtDayLong(weekEnd(cursor))}`;
+        : `${weekStart(cursor).getDate()} – ${fmtDayShort(weekEnd(cursor))}`;
 
   const today = todayISO();
 

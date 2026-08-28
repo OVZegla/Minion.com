@@ -13,7 +13,7 @@ import {
 } from '@/hooks/data';
 import { useUi } from '@/components/layout/AppProviders';
 import { nextUpcoming } from '@/features/calendar/helpers';
-import { fmtDayShort, relativeCountdown } from '@/lib/dates';
+import { daysUntil, fmtDayShort, relativeCountdown } from '@/lib/dates';
 
 export default function SubjectsPage() {
   const [scope, setScope] = useState<'active' | 'archived'>('active');
@@ -31,8 +31,10 @@ export default function SubjectsPage() {
 
   const nextLineFor = (subjectId: string): string | undefined => {
     const subjectEvents = (events ?? []).filter((event) => event.subjectId === subjectId);
-    const next = nextUpcoming(subjectEvents);
-    const exam = (exams ?? []).find((item) => item.subjectId === subjectId);
+    const next = nextUpcoming(subjectEvents, new Date(), ['cours', 'cm', 'td', 'tp']);
+    const exam = (exams ?? [])
+      .filter((item) => item.subjectId === subjectId)
+      .find((item) => daysUntil(item.date) >= 0);
     if (next) {
       return `Prochain cours : ${fmtDayShort(next.date)} à ${next.event.startTime}`;
     }

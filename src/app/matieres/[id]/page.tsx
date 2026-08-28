@@ -31,7 +31,7 @@ import { TaskCard } from '@/features/tasks/TaskCard';
 import { toggleTask } from '@/db/repo';
 import { nextUpcoming } from '@/features/calendar/helpers';
 import { computeProgress, MASTERY_LABEL } from '@/lib/progress';
-import { fmtDayShort, fmtDuration, relativeCountdown, relativeDayLabel } from '@/lib/dates';
+import { daysUntil, fmtDayShort, fmtDuration, relativeCountdown, relativeDayLabel } from '@/lib/dates';
 import { useUi } from '@/components/layout/AppProviders';
 import { formatBytes } from '@/lib/text';
 
@@ -64,13 +64,19 @@ export default function SubjectPage({ params }: { params: Promise<{ id: string }
     [sessions, id],
   );
   const nextCourse = useMemo(
-    () => nextUpcoming((events ?? []).filter((event) => event.subjectId === id)),
+    () =>
+      nextUpcoming((events ?? []).filter((event) => event.subjectId === id), new Date(), [
+        'cours',
+        'cm',
+        'td',
+        'tp',
+      ]),
     [events, id],
   );
 
   const progress = computeProgress(chapters ?? []);
   const openTasks = (tasks ?? []).filter((task) => task.status !== 'done');
-  const nextExam = subjectExams.find((exam) => relativeCountdown(exam.date) !== 'hier');
+  const nextExam = subjectExams.find((exam) => daysUntil(exam.date) >= 0);
   const nextTask = openTasks.find((task) => task.dueDate);
 
   if (subject === undefined) return null;

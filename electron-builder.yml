@@ -1,0 +1,65 @@
+appId: com.minion.app
+productName: minion.com
+copyright: minion.com
+
+directories:
+  output: dist-desktop
+  buildResources: electron/assets
+
+# Seul le code Electron est empaqueté dans l'asar ; le serveur Next est
+# copié tel quel dans resources/app-server (il doit rester lisible sur disque).
+# Le processus principal n'utilise que des modules internes à Electron :
+# aucune dépendance npm ne doit entrer dans l'asar (elles servent uniquement
+# au build web et pèseraient plusieurs centaines de mégaoctets).
+files:
+  - electron/**/*
+  - package.json
+  - '!node_modules/**/*'
+  - '!**/*.map'
+
+extraResources:
+  - from: desktop/app
+    to: app-server
+    filter:
+      - '**/*'
+
+asar: true
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: electron/assets/icon.ico
+  artifactName: minion.com-${version}-windows-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: minion.com
+  installerIcon: electron/assets/icon.ico
+  uninstallerIcon: electron/assets/icon.ico
+  installerHeaderIcon: electron/assets/icon.ico
+  deleteAppDataOnUninstall: false
+  language: '1036' # français
+
+portable:
+  artifactName: minion.com-${version}-portable.exe
+
+mac:
+  target: dmg
+  icon: electron/assets/icon.png
+  category: public.app-category.education
+
+linux:
+  target:
+    - AppImage
+    - deb
+  icon: electron/assets/icon.png
+  category: Education
+  maintainer: minion.com

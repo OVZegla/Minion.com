@@ -7,8 +7,12 @@ méthodes juridiques, SAÉ et sessions de travail — au même endroit, dans une
 interface simple et rapide.
 
 L'application fonctionne **entièrement en local** : aucun compte, aucun serveur,
-aucune clé API, aucun service externe. Tout est stocké dans le navigateur
-(IndexedDB) et reste sur l'appareil.
+aucune clé API, aucun service externe. Tout est stocké sur l'appareil
+(IndexedDB).
+
+Elle s'utilise dans un navigateur, s'installe comme une PWA, ou s'installe comme
+une **application de bureau** — un `.exe` classique sous Windows
+(cf. « Application de bureau » plus bas).
 
 ---
 
@@ -40,6 +44,7 @@ rien n'enferme l'application dans une formation précise.
 | Données | IndexedDB via Dexie + `dexie-react-hooks` (requêtes réactives) |
 | Dates | date-fns (locale `fr`) |
 | Validation | Zod (import de sauvegarde) |
+| Bureau | Electron 33 + electron-builder (installeur NSIS) |
 | Tests | Vitest (+ `fake-indexeddb`) et scénarios navigateur Playwright |
 
 Aucune dépendance à une API externe, à un service d'IA ou à un backend.
@@ -211,6 +216,77 @@ pour du contenu utilisateur : aucun HTML importé n'est jamais interprété.
 affichage `standalone` et service worker (`public/sw.js`) enregistré en
 production. Les données vivant dans IndexedDB, l'application reste pleinement
 utilisable sans réseau une fois la coquille en cache.
+
+---
+
+## Application de bureau (Windows, macOS, Linux)
+
+minion.com s'installe aussi comme une vraie application, sans navigateur ni
+connexion. L'installeur Windows est un `.exe` classique.
+
+### Utiliser l'application installée
+
+1. Lancer `minion.com-1.0.0-windows-x64.exe`.
+2. Windows affiche un écran bleu **« Windows a protégé votre ordinateur »** :
+   c'est normal, l'application n'est pas signée par un certificat payant.
+   Cliquer sur **Informations complémentaires** puis **Exécuter quand même**.
+3. Choisir le dossier d'installation. Aucun droit administrateur n'est requis :
+   l'installation se fait pour l'utilisateur courant.
+4. Des raccourcis sont créés sur le bureau et dans le menu Démarrer.
+
+Une version **portable** (`minion.com-1.0.0-portable.exe`) est aussi produite :
+elle ne s'installe pas et peut tourner depuis une clé USB.
+
+### Où sont les données ?
+
+Dans le profil Windows de l'utilisatrice :
+`%APPDATA%\minion.com`. Le menu **Aide → Ouvrir le dossier de mes données**
+y conduit directement. Désinstaller l'application **ne supprime pas** ces
+données ; pour les emporter ailleurs, utiliser l'export JSON des paramètres.
+
+### Comment ça marche
+
+Toutes les données vivent dans IndexedDB, que Chromium refuse d'ouvrir sur une
+page `file://`. L'application embarque donc son propre serveur Next.js, lancé
+au démarrage sur `127.0.0.1` sur un port libre, dans un processus séparé.
+
+Cela reste **100 % local** : le serveur n'écoute que sur la boucle locale,
+aucune requête ne sort de l'ordinateur, et l'application fonctionne sans réseau.
+Comme le socket est lié à `127.0.0.1` et non à toutes les interfaces, le
+pare-feu Windows n'affiche normalement aucune demande d'autorisation.
+
+Côté sécurité : `contextIsolation` activé, `nodeIntegration` désactivé, aucune
+API Node exposée à la page, et les liens externes s'ouvrent dans le navigateur
+par défaut plutôt que dans la fenêtre de l'application.
+
+### Construire soi-même
+
+```bash
+npm install
+npm run desktop:build     # prépare le serveur embarqué (desktop/app)
+npm run desktop:start     # lance l'application sans l'empaqueter
+npm run qa:desktop        # vérifie l'application Electron lancée
+
+npm run dist:win          # -> dist-desktop/*.exe   (installeur + portable)
+npm run dist:linux        # -> dist-desktop/*.AppImage et *.deb
+npm run dist:mac          # -> dist-desktop/*.dmg
+```
+
+`npm run dist:win` sur une machine Windows est le chemin le plus simple.
+Depuis Linux, il faut `wine` installé (32 bits inclus) pour que l'icône et les
+métadonnées soient écrites dans l'exécutable.
+
+Le dépôt contient aussi un workflow GitHub Actions
+(`.github/workflows/desktop.yml`) qui construit l'installeur sur un vrai runner
+Windows : déclenchement manuel, ou automatique sur un tag `v*` (les `.exe` sont
+alors attachés à la release).
+
+### Signature de code
+
+Les installeurs ne sont pas signés : c'est ce qui déclenche l'avertissement
+SmartScreen au premier lancement. Pour le supprimer, il faut un certificat
+Authenticode (payant) et renseigner les variables `CSC_LINK` et
+`CSC_KEY_PASSWORD` avant `npm run dist:win`.
 
 ---
 

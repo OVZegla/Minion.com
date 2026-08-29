@@ -90,10 +90,47 @@ function makePng(size, { rounded = true } = {}) {
   ]);
 }
 
+/**
+ * Fabrique un fichier .ico contenant plusieurs PNG (format accepté depuis
+ * Windows Vista). electron-builder exige au moins une image 256x256.
+ */
+function makeIco(sizes) {
+  const images = sizes.map((size) => ({ size, data: makePng(size, { rounded: false }) }));
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0); // réservé
+  header.writeUInt16LE(1, 2); // type : icône
+  header.writeUInt16LE(images.length, 4);
+
+  const entries = [];
+  let offset = 6 + images.length * 16;
+  for (const image of images) {
+    const entry = Buffer.alloc(16);
+    entry[0] = image.size >= 256 ? 0 : image.size; // 0 signifie 256
+    entry[1] = image.size >= 256 ? 0 : image.size;
+    entry[2] = 0; // palette
+    entry[3] = 0; // réservé
+    entry.writeUInt16LE(1, 4); // plans
+    entry.writeUInt16LE(32, 6); // bits par pixel
+    entry.writeUInt32LE(image.data.length, 8);
+    entry.writeUInt32LE(offset, 12);
+    offset += image.data.length;
+    entries.push(entry);
+  }
+
+  return Buffer.concat([header, ...entries, ...images.map((image) => image.data)]);
+}
+
 const outDir = path.join(process.cwd(), 'public');
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(path.join(outDir, 'icon-192.png'), makePng(192));
 fs.writeFileSync(path.join(outDir, 'icon-512.png'), makePng(512));
 fs.writeFileSync(path.join(outDir, 'icon-maskable-512.png'), makePng(512, { rounded: false }));
 fs.writeFileSync(path.join(outDir, 'apple-touch-icon.png'), makePng(180, { rounded: false }));
-console.log('Icônes générées dans public/');
+
+// Icônes de l'application de bureau (utilisées par electron-builder)
+const desktopDir = path.join(process.cwd(), 'electron', 'assets');
+fs.mkdirSync(desktopDir, { recursive: true });
+fs.writeFileSync(path.join(desktopDir, 'icon.png'), makePng(512, { rounded: false }));
+fs.writeFileSync(path.join(desktopDir, 'icon.ico'), makeIco([16, 24, 32, 48, 64, 128, 256]));
+
+console.log('Icônes générées dans public/ et electron/assets/');

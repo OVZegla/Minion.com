@@ -14,3 +14,15 @@ node qa/scenarios.mjs   # les 12 scénarios fonctionnels de bout en bout
 `scenarios.mjs` crée une matière, des chapitres, un cours, une tâche, un examen,
 planifie et termine une révision, change un état de maîtrise, utilise la
 recherche, exporte puis réimporte les données, et vérifie la vue mobile.
+
+## Application de bureau
+
+```bash
+npm run desktop:build
+npm run qa:desktop      # lance Electron et vérifie la fenêtre réelle
+```
+
+`desktop.mjs` démarre l'application Electron, vérifie que la fenêtre charge bien
+le serveur local, qu'aucune API Node n'est exposée à la page, que la base
+IndexedDB est créée, que les données de démonstration sont là et qu'elles
+survivent à un rechargement.

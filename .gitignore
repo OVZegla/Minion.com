@@ -9,3 +9,7 @@ next-env.d.ts
 !.env.example
 .DS_Store
 coverage/
+
+# Application de bureau
+desktop/
+dist-desktop/

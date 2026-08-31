@@ -12,6 +12,8 @@ const { app, BrowserWindow, Menu, net: electronNet, protocol, shell, dialog } = 
 const { fork } = require('node:child_process');
 const fs = require('node:fs');
 const net = require('node:net');
+const http = require('node:http');
+const fsp = require('node:fs/promises');
 const path = require('node:path');
 const library = require('./library.cjs');
 
@@ -69,26 +71,47 @@ function findFreePort() {
   });
 }
 
-function waitForServer(port, timeoutMs = 30000) {
-  const deadline = Date.now() + timeoutMs;
-  return new Promise((resolve, reject) => {
-    const attempt = () => {
-      const socket = net.connect(port, '127.0.0.1');
-      socket.once('connect', () => {
-        socket.destroy();
-        resolve();
-      });
-      socket.once('error', () => {
-        socket.destroy();
-        if (Date.now() > deadline) {
-          reject(new Error('Le serveur local n’a pas démarré à temps.'));
-        } else {
-          setTimeout(attempt, 150);
-        }
-      });
-    };
-    attempt();
+/**
+ * Attend que le serveur soit reellement pret.
+ *
+ * Un simple test de connexion TCP ne suffit pas : Next se met a ecouter AVANT
+ * d'avoir fini son initialisation. Une requete arrivant dans cet intervalle
+ * repond « Internal Server Error ». On interroge donc vraiment la page
+ * d'accueil jusqu'a obtenir une reponse valide.
+ */
+function probe(port, timeoutMs = 4000) {
+  return new Promise((resolve) => {
+    const request = http.get(
+      { host: '127.0.0.1', port, path: '/', timeout: timeoutMs },
+      (response) => {
+        response.resume();
+        resolve(response.statusCode ?? 0);
+      },
+    );
+    request.on('timeout', () => {
+      request.destroy();
+      resolve(0);
+    });
+    request.on('error', () => resolve(0));
   });
+}
+
+async function waitForServer(port, timeoutMs = 60000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastStatus = 0;
+
+  while (Date.now() < deadline) {
+    lastStatus = await probe(port);
+    // 2xx/3xx/4xx = le routeur repond ; 5xx ou 0 = pas encore pret.
+    if (lastStatus > 0 && lastStatus < 500) return;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  throw new Error(
+    lastStatus >= 500
+      ? `Le moteur de l'application a repondu ${lastStatus} au demarrage.`
+      : "Le moteur de l'application n'a pas demarre a temps.",
+  );
 }
 
 /* --------------------------- Position fenêtre --------------------------- */
@@ -118,6 +141,31 @@ function saveWindowState(win) {
   }
 }
 
+/* ------------------------------- Journal -------------------------------- */
+
+/**
+ * Journal du moteur interne, pour pouvoir diagnostiquer un démarrage raté
+ * sans avoir à relancer l'application depuis un terminal.
+ */
+const logFile = () => path.join(app.getPath('userData'), 'journal.log');
+
+function appendLog(text) {
+  try {
+    fs.appendFileSync(logFile(), text.endsWith('\n') ? text : `${text}\n`);
+  } catch {
+    /* le journal ne doit jamais empêcher l'application de tourner */
+  }
+}
+
+async function resetLog() {
+  try {
+    await fsp.mkdir(path.dirname(logFile()), { recursive: true });
+    await fsp.writeFile(logFile(), `minion.com ${app.getVersion()} — ${new Date().toISOString()}\n`);
+  } catch {
+    /* idem */
+  }
+}
+
 /* ------------------------------- Serveur -------------------------------- */
 
 async function startServer() {
@@ -131,12 +179,20 @@ async function startServer() {
 
   serverPort = await findFreePort();
 
+  // On repart d'un environnement propre : NODE_OPTIONS et les variables
+  // ELECTRON_* héritées perturbent le processus enfant.
+  const childEnv = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key === 'NODE_OPTIONS' || key.startsWith('ELECTRON_')) continue;
+    childEnv[key] = value;
+  }
+
   serverProcess = fork(entry, [], {
     cwd: SERVER_DIR,
     // ELECTRON_RUN_AS_NODE fait tourner le binaire Electron comme un Node
     // classique : le serveur Next reste isolé du processus principal.
     env: {
-      ...process.env,
+      ...childEnv,
       ELECTRON_RUN_AS_NODE: '1',
       NODE_ENV: 'production',
       PORT: String(serverPort),
@@ -145,8 +201,13 @@ async function startServer() {
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
 
-  serverProcess.stdout?.on('data', (chunk) => process.stdout.write(`[serveur] ${chunk}`));
-  serverProcess.stderr?.on('data', (chunk) => process.stderr.write(`[serveur] ${chunk}`));
+  const record = (prefix) => (chunk) => {
+    const line = `${prefix} ${chunk}`;
+    process.stdout.write(line);
+    appendLog(line);
+  };
+  serverProcess.stdout?.on('data', record('[serveur]'));
+  serverProcess.stderr?.on('data', record('[serveur erreur]'));
   serverProcess.on('exit', (code) => {
     serverProcess = null;
     if (code !== 0 && !app.isQuitting) {
@@ -162,6 +223,31 @@ async function startServer() {
   return serverPort;
 }
 
+/** Page d'erreur lisible, plutôt que le « Internal Server Error » brut de Next. */
+function errorPage(detail) {
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<title>minion.com</title><style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:#fcfaf5;color:#241f18;font:15px/1.6 system-ui,sans-serif;padding:24px}
+.box{max-width:520px}h1{font-size:20px;margin:0 0 12px}
+p{color:#7b7264;margin:0 0 10px}code{background:#f7f3ea;padding:2px 6px;border-radius:6px;
+font-size:13px;word-break:break-all}
+button{margin-top:16px;border:0;border-radius:12px;background:#ffc93c;color:#2a2109;
+font:600 14px system-ui,sans-serif;padding:10px 18px;cursor:pointer}
+</style></head><body><div class="box">
+<h1>minion.com n’a pas réussi à démarrer</h1>
+<p>Le moteur interne de l’application n’a pas répondu correctement. Tes données ne
+sont pas touchées : elles restent enregistrées sur cet ordinateur.</p>
+<p>Détail : <code>${String(detail).replace(/[<>&]/g, '')}</code></p>
+<p>Un journal détaillé se trouve dans :<br><code>${logFile()}</code></p>
+<button onclick="location.reload()">Réessayer</button>
+</div></body></html>`;
+  return new Response(html, {
+    status: 200,
+    headers: { 'content-type': 'text/html; charset=utf-8' },
+  });
+}
+
 /** Relaie « minion://app/... » vers le serveur local, sans exposer le port. */
 function registerAppProtocol(port) {
   protocol.handle(APP_SCHEME, async (request) => {
@@ -173,27 +259,36 @@ function registerAppProtocol(port) {
       headers: request.headers,
       redirect: 'follow',
     };
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
+    const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
+    if (hasBody) {
       init.body = request.body;
       init.duplex = 'half';
     }
 
-    try {
-      return await electronNet.fetch(target, init);
-    } catch (error) {
-      return new Response(`Erreur interne : ${String(error?.message ?? error)}`, {
-        status: 502,
-        headers: { 'content-type': 'text/plain; charset=utf-8' },
-      });
+    let lastError = null;
+    // Une requête peut arriver pendant que Next finit de s'initialiser :
+    // on laisse passer quelques tentatives avant de conclure à une panne.
+    const attempts = hasBody ? 1 : 3;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        const response = await electronNet.fetch(target, init);
+        if (response.status < 500 || attempt === attempts - 1) return response;
+        lastError = `réponse ${response.status}`;
+      } catch (error) {
+        lastError = String(error?.message ?? error);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 400));
     }
-  });
-}
 
-function stopServer() {
-  if (!serverProcess) return;
-  serverProcess.removeAllListeners('exit');
-  serverProcess.kill();
-  serverProcess = null;
+    appendLog(`[protocole] ${incoming.pathname} : ${lastError}`);
+
+    // Seule une navigation mérite une page d'erreur ; pour une ressource on
+    // renvoie un code d'erreur discret.
+    if (request.method === 'GET' && (request.headers.get('accept') ?? '').includes('text/html')) {
+      return errorPage(lastError ?? 'inconnu');
+    }
+    return new Response('', { status: 502 });
+  });
 }
 
 /* ------------------------------- Fenêtre -------------------------------- */
@@ -319,6 +414,10 @@ function buildMenu() {
           label: 'Ouvrir le dossier de mes données',
           click: () => shell.openPath(app.getPath('userData')),
         },
+        {
+          label: 'Ouvrir le journal technique',
+          click: () => shell.openPath(logFile()),
+        },
       ],
     },
   ];
@@ -339,6 +438,8 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(async () => {
+    await resetLog();
+
     // Classement automatique des documents sur le disque.
     library.register();
 
@@ -348,7 +449,12 @@ if (!app.requestSingleInstanceLock()) {
       buildMenu();
       createWindow();
     } catch (error) {
-      dialog.showErrorBox('minion.com — démarrage impossible', String(error?.message ?? error));
+      const detail = String(error?.message ?? error);
+      appendLog(`[demarrage] ${detail}`);
+      dialog.showErrorBox(
+        'minion.com — démarrage impossible',
+        `${detail}\n\nUn journal détaillé se trouve dans :\n${logFile()}`,
+      );
       app.quit();
     }
 

@@ -25,6 +25,10 @@ jobs:
 
       - name: Installer les dépendances
         run: npm ci
+        env:
+          # Les navigateurs Playwright ne servent qu'aux vérifications locales
+          # (qa/*.mjs) : inutile de télécharger 500 Mo sur le runner.
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
       - name: Vérifier les types et les tests
         run: |

@@ -9,13 +9,23 @@
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 
 const root = process.cwd();
 const outDir = path.join(root, 'desktop', 'app');
 
-function run(command, args) {
-  execFileSync(command, args, {
+/**
+ * Lance le CLI Next avec le Node courant.
+ *
+ * On n'appelle pas « npx » : depuis Node 20, spawn refuse d'exécuter un
+ * fichier .cmd sans shell (EINVAL), ce qui casserait le build sous Windows.
+ * Passer par le script JS de Next évite aussi tout problème de guillemets.
+ */
+function runNext(args) {
+  const require_ = createRequire(import.meta.url);
+  const nextCli = require_.resolve('next/dist/bin/next');
+  execFileSync(process.execPath, [nextCli, ...args], {
     stdio: 'inherit',
     env: { ...process.env, DESKTOP_BUILD: '1' },
     cwd: root,
@@ -37,7 +47,7 @@ function copyDir(from, to) {
 }
 
 console.log('→ Build Next.js (mode standalone)…');
-run(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['next', 'build']);
+runNext(['build']);
 
 const standalone = path.join(root, '.next', 'standalone');
 if (!fs.existsSync(standalone)) {

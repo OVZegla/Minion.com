@@ -4,10 +4,18 @@ name: Application de bureau
 # Déclenchement manuel, ou automatique sur un tag « v* » (une release est
 # alors créée avec les fichiers .exe attachés).
 on:
+  # Déclenchement manuel depuis l'onglet Actions (une fois le workflow présent
+  # sur la branche par défaut).
   workflow_dispatch:
   push:
+    # Un tag « v1.0.0 » construit l'installeur ET publie une release.
     tags:
       - 'v*'
+    # Chaque push sur la branche de travail construit l'installeur et le met
+    # à disposition en artefact. Retirer ce bloc pour ne plus consommer de
+    # minutes Actions à chaque commit.
+    branches:
+      - 'claude/minion-student-app-4yopsa'
 
 permissions:
   contents: write

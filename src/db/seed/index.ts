@@ -1177,7 +1177,6 @@ export async function seedDemoData(
 
   await db.settings.put(
     defaultSettings({
-      displayName: '',
       currentAcademicYearId: year.id,
       currentSemesterId: semester1.id,
       onboardingDone: options.onboarded ?? true,

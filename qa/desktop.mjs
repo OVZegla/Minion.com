@@ -65,6 +65,13 @@ check('Aucune API Node accessible depuis la page', bridge.noRequire && bridge.no
 let body = await page.textContent('body');
 check('Données de démonstration chargées', body.includes('Droit constitutionnel'));
 
+// Accueil personnalisé et phrase d'encouragement au démarrage
+check('Salutation au prénom', /Bon(jour|soir|ne nuit) Einat/.test(body), body.slice(0, 0));
+const phrase = await page.evaluate(
+  () => document.querySelector('[data-encouragement]')?.textContent ?? '',
+);
+check('Une phrase d’encouragement est affichée', phrase.trim().length > 20, phrase.slice(0, 60));
+
 const databases = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name));
 check('Base IndexedDB créée', databases.includes('minion-com'), databases.join(', '));
 

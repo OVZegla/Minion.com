@@ -335,6 +335,24 @@ Authenticode (payant) et renseigner les variables `CSC_LINK` et
 
 ---
 
+## Accueil personnalisé
+
+Le tableau de bord salue par le prénom : « Bonjour Einat 👋 ». Le prénom se
+change dans **Paramètres → Apparence → Ton prénom** ; laissé vide, la salutation
+reste simplement « Bonjour 👋 ».
+
+À chaque ouverture de l'application, une **phrase d'encouragement** s'affiche
+sous la salutation. 250 phrases sont fournies (`src/lib/encouragements.ts`),
+au ton volontairement doux et jamais culpabilisant.
+
+Le tirage garantit qu'aucune phrase ne revient tant que les 249 autres n'ont
+pas été vues, et qu'une phrase n'est jamais répétée deux fois de suite au
+changement de cycle. L'avancement est mémorisé sur l'appareil ; la phrase est
+tirée une fois par lancement, pas à chaque navigation, et peut être masquée
+d'un clic. Un réglage permet de désactiver complètement l'affichage.
+
+---
+
 ## Discrétion
 
 Un réglage **Paramètres → Apparence → « Afficher le nom minion.com en haut de

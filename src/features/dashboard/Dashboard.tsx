@@ -46,6 +46,7 @@ import {
   weekStart,
 } from '@/lib/dates';
 import { useUi } from '@/components/layout/AppProviders';
+import { Encouragement } from './Encouragement';
 
 export function Dashboard() {
   const settings = useSettings();
@@ -189,6 +190,9 @@ export function Dashboard() {
             ? 'Voilà ce qui t’attend aujourd’hui.'
             : 'Rien de prévu au planning aujourd’hui.'}
         </p>
+        <div className="mt-4 max-w-2xl">
+          <Encouragement />
+        </div>
       </header>
 
       {/* ---------- Prochain cours (mise en avant mobile) ---------- */}

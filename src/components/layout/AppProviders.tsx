@@ -12,6 +12,7 @@ import {
 import { db } from '@/db/db';
 import { seedDemoData } from '@/db/seed';
 import { ToastProvider } from '@/components/ui/Toast';
+import { pickEncouragement, readState, writeState } from '@/lib/encouragement';
 import type { ThemeMode } from '@/types';
 
 /* ------------------------------ Theme -------------------------------- */
@@ -53,6 +54,9 @@ interface UiApi {
   closeSearch: () => void;
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  /** Phrase tiree une seule fois par ouverture de l'application. */
+  encouragement: string | null;
+  dismissEncouragement: () => void;
   /** true tant que la base locale n'est pas prete */
   booting: boolean;
 }
@@ -75,6 +79,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [booting, setBooting] = useState(true);
+  const [encouragement, setEncouragement] = useState<string | null>(null);
 
   /* Amorcage : au tout premier lancement, la demo est chargee
      automatiquement pour que l'application ne soit jamais vide. */
@@ -95,6 +100,15 @@ export function AppProviders({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  /* Une phrase d'encouragement est tiree a chaque ouverture de
+     l'application — pas a chaque navigation : ce composant ne monte
+     qu'une fois par lancement. */
+  useEffect(() => {
+    const pick = pickEncouragement(readState());
+    writeState(pick.state);
+    setEncouragement(pick.text || null);
   }, []);
 
   /* Theme : la preference est aussi gardee en localStorage pour eviter
@@ -147,8 +161,19 @@ export function AppProviders({ children }: { children: ReactNode }) {
       sidebarCollapsed,
       toggleSidebar,
       booting,
+      encouragement,
+      dismissEncouragement: () => setEncouragement(null),
     }),
-    [quickAddOpen, quickAddKind, openQuickAdd, searchOpen, sidebarCollapsed, toggleSidebar, booting],
+    [
+      quickAddOpen,
+      quickAddKind,
+      openQuickAdd,
+      searchOpen,
+      sidebarCollapsed,
+      toggleSidebar,
+      booting,
+      encouragement,
+    ],
   );
 
   const theme = useMemo<ThemeApi>(() => ({ mode, resolved, setMode }), [mode, resolved, setMode]);

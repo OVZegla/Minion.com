@@ -14,7 +14,7 @@ export function defaultSettings(overrides: Partial<UserSettings> = {}): UserSett
   const ts = nowISO();
   return {
     id: 'app',
-    displayName: '',
+    displayName: 'Einat',
     program: 'BUT Carrières Juridiques',
     yearLabel: 'BUT 1',
     track: undefined,
@@ -27,6 +27,7 @@ export function defaultSettings(overrides: Partial<UserSettings> = {}): UserSett
     onboardingDone: false,
     demoDataLoaded: false,
     showAppName: true,
+    showEncouragement: true,
     notifications: { ...DEFAULT_NOTIFICATION_PREFS },
     createdAt: ts,
     updatedAt: ts,

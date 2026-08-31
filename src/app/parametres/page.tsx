@@ -95,6 +95,21 @@ export default function SettingsPage() {
               </span>
             </label>
 
+            <label className="mt-2 flex items-start gap-3 rounded-xl border border-line p-3 text-[14px] text-ink">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-[color:var(--primary)]"
+                checked={settings.showEncouragement !== false}
+                onChange={(event) => void updateSettings({ showEncouragement: event.target.checked })}
+              />
+              <span>
+                Afficher une phrase d’encouragement à l’ouverture
+                <span className="mt-0.5 block text-[12px] text-muted">
+                  Une phrase différente à chaque démarrage, sans répétition.
+                </span>
+              </span>
+            </label>
+
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
                 <label className="label" htmlFor="st-name">

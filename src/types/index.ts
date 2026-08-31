@@ -51,6 +51,8 @@ export interface UserSettings {
   demoDataLoaded: boolean;
   /** Affiche « minion.com » en haut de l'application (discretion en cours). */
   showAppName: boolean;
+  /** Affiche une phrase d'encouragement au demarrage. */
+  showEncouragement: boolean;
   notifications: NotificationPrefs;
   createdAt: DateTimeISO;
   updatedAt: DateTimeISO;

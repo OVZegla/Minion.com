@@ -20,6 +20,7 @@ import { updateSettings, clearAllData } from '@/db/repo';
 import { seedDemoData } from '@/db/seed';
 import { downloadBackup, parseBackup, restoreBackup, type ParsedBackup } from '@/db/backup';
 import { OnboardingWizard } from '@/features/onboarding/OnboardingWizard';
+import { LibrarySettings } from '@/features/documents/LibrarySettings';
 import type { NotifCategory, ThemeMode } from '@/types';
 
 const NOTIF_LABELS: Record<keyof NonNullable<ReturnType<typeof useSettings>>['notifications'], string> = {
@@ -78,6 +79,21 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+
+            <label className="mt-4 flex items-start gap-3 rounded-xl border border-line p-3 text-[14px] text-ink">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-[color:var(--primary)]"
+                checked={settings.showAppName}
+                onChange={(event) => void updateSettings({ showAppName: event.target.checked })}
+              />
+              <span>
+                Afficher le nom « minion.com » en haut de l’application
+                <span className="mt-0.5 block text-[12px] text-muted">
+                  Décoché, seule la pastille reste visible — plus discret en cours.
+                </span>
+              </span>
+            </label>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
@@ -182,6 +198,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
+
+        <LibrarySettings />
 
         {/* ------------------------ Sauvegarde ------------------------- */}
         <section>

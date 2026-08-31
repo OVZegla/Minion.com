@@ -5,12 +5,14 @@ import { usePathname } from 'next/navigation';
 import { X } from 'lucide-react';
 import clsx from 'clsx';
 import { NAV_GROUPS, SETTINGS_ITEM } from './nav';
-import { usePendingInboxCount } from '@/hooks/data';
+import { usePendingInboxCount, useSettings } from '@/hooks/data';
 
 /** Menu complet mobile : la sidebar n'est jamais affichee telle quelle sur telephone. */
 export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const inboxCount = usePendingInboxCount();
+  const settings = useSettings();
+  const showAppName = settings?.showAppName ?? true;
   if (!open) return null;
 
   return (
@@ -24,7 +26,13 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
       <div className="relative flex h-full w-[80%] max-w-[300px] animate-slide-up flex-col border-r border-line bg-surface">
         <div className="flex items-center justify-between px-4 py-4">
           <span className="text-[15px] font-semibold">
-            minion<span className="text-muted">.com</span>
+            {showAppName ? (
+              <>
+                minion<span className="text-muted">.com</span>
+              </>
+            ) : (
+              <span className="text-muted">Menu</span>
+            )}
           </span>
           <button type="button" onClick={onClose} className="btn-ghost h-9 w-9 rounded-xl p-0" aria-label="Fermer">
             <X size={19} />

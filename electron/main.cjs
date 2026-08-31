@@ -8,11 +8,12 @@
  * démarrage. Rien ne sort de l'ordinateur : aucune requête réseau, aucun
  * compte, aucune clé API.
  */
-const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
+const { app, BrowserWindow, Menu, net: electronNet, protocol, shell, dialog } = require('electron');
 const { fork } = require('node:child_process');
 const fs = require('node:fs');
 const net = require('node:net');
 const path = require('node:path');
+const library = require('./library.cjs');
 
 const isDev = !app.isPackaged;
 /** En production le serveur est copié dans resources/app-server. */
@@ -22,6 +23,33 @@ const SERVER_DIR = isDev
 
 app.setName('minion.com');
 app.setAppUserModelId('com.minion.app');
+
+/**
+ * Origine fixe de l'application.
+ *
+ * Le serveur interne écoute sur un port libre, donc différent à chaque
+ * lancement. Si la fenêtre chargeait « http://127.0.0.1:<port> », l'origine
+ * changerait à chaque ouverture — et IndexedDB, qui est cloisonné par origine,
+ * repartirait vide : toutes les données seraient perdues.
+ *
+ * On expose donc le serveur derrière un schéma dédié et constant. Les données
+ * restent attachées à « minion://app » pour toujours.
+ */
+const APP_SCHEME = 'minion';
+const APP_ORIGIN = `${APP_SCHEME}://app`;
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      corsEnabled: true,
+    },
+  },
+]);
 
 let serverProcess = null;
 let mainWindow = null;
@@ -134,6 +162,33 @@ async function startServer() {
   return serverPort;
 }
 
+/** Relaie « minion://app/... » vers le serveur local, sans exposer le port. */
+function registerAppProtocol(port) {
+  protocol.handle(APP_SCHEME, async (request) => {
+    const incoming = new URL(request.url);
+    const target = `http://127.0.0.1:${port}${incoming.pathname}${incoming.search}`;
+
+    const init = {
+      method: request.method,
+      headers: request.headers,
+      redirect: 'follow',
+    };
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      init.body = request.body;
+      init.duplex = 'half';
+    }
+
+    try {
+      return await electronNet.fetch(target, init);
+    } catch (error) {
+      return new Response(`Erreur interne : ${String(error?.message ?? error)}`, {
+        status: 502,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
+    }
+  });
+}
+
 function stopServer() {
   if (!serverProcess) return;
   serverProcess.removeAllListeners('exit');
@@ -143,7 +198,7 @@ function stopServer() {
 
 /* ------------------------------- Fenêtre -------------------------------- */
 
-function createWindow(port) {
+function createWindow() {
   const state = readWindowState();
 
   mainWindow = new BrowserWindow({
@@ -181,24 +236,24 @@ function createWindow(port) {
     return { action: 'deny' };
   };
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith(`http://127.0.0.1:${port}`)) return { action: 'allow' };
+    if (url.startsWith(APP_ORIGIN)) return { action: 'allow' };
     return openExternally(url);
   });
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(`http://127.0.0.1:${port}`)) {
+    if (!url.startsWith(APP_ORIGIN)) {
       event.preventDefault();
       openExternally(url);
     }
   });
 
-  mainWindow.loadURL(`http://127.0.0.1:${port}/`);
+  mainWindow.loadURL(`${APP_ORIGIN}/`);
 }
 
 /* -------------------------------- Menu ---------------------------------- */
 
 function buildMenu() {
   const go = (route) => () => {
-    if (mainWindow) mainWindow.loadURL(`http://127.0.0.1:${serverPort}${route}`);
+    if (mainWindow) mainWindow.loadURL(`${APP_ORIGIN}${route}`);
   };
 
   const template = [
@@ -284,17 +339,21 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(async () => {
+    // Classement automatique des documents sur le disque.
+    library.register();
+
     try {
       const port = await startServer();
+      registerAppProtocol(port);
       buildMenu();
-      createWindow(port);
+      createWindow();
     } catch (error) {
       dialog.showErrorBox('minion.com — démarrage impossible', String(error?.message ?? error));
       app.quit();
     }
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0 && serverPort) createWindow(serverPort);
+      if (BrowserWindow.getAllWindows().length === 0 && serverPort) createWindow();
     });
   });
 

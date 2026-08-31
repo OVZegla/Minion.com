@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const BASE = 'http://localhost:3120';
+const BASE = 'http://localhost:3140';
 const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const errors = [];
 let pass = 0, fail = 0;

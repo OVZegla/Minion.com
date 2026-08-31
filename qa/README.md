@@ -22,7 +22,14 @@ npm run desktop:build
 npm run qa:desktop      # lance Electron et vérifie la fenêtre réelle
 ```
 
-`desktop.mjs` démarre l'application Electron, vérifie que la fenêtre charge bien
-le serveur local, qu'aucune API Node n'est exposée à la page, que la base
-IndexedDB est créée, que les données de démonstration sont là et qu'elles
-survivent à un rechargement.
+`desktop.mjs` lance l'application Electron **deux fois de suite** :
+
+1. première session — origine fixe, isolation (aucune API Node dans la page),
+   base IndexedDB créée, données de démonstration, classement réel des documents
+   sur le disque (chemins vérifiés fichier par fichier), dépôt d'un nouveau
+   document, réglage d'affichage du nom ;
+2. seconde session — les données saisies pendant la première session sont
+   toujours là.
+
+Ce second lancement est essentiel : il vérifie que l'origine ne change pas d'une
+ouverture à l'autre, sans quoi IndexedDB repartirait vide à chaque démarrage.

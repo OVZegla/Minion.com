@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import {
   File,
   FileText,
+  FolderInput,
   FolderOpen,
   Image as ImageIcon,
   Link2,
@@ -14,6 +15,9 @@ import {
 import { db } from '@/db/db';
 import { EmptyState, PageHeader, Segmented, SubjectBadge } from '@/components/ui';
 import { DropZone } from '@/features/documents/DropZone';
+import { FileDocumentModal } from '@/features/documents/FileDocumentModal';
+import { deleteDocumentEverywhere, refileDocument } from '@/features/documents/filing';
+import { isDesktop, revealLocalFile } from '@/lib/desktop';
 import { useDocuments, useSubjectMap, useSubjects } from '@/hooks/data';
 import { useToast } from '@/components/ui/Toast';
 import { formatBytes, foldCase } from '@/lib/text';
@@ -48,6 +52,8 @@ export default function DocumentsPage() {
   const [view, setView] = useState<View>('tous');
   const [query, setQuery] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
+  const [filing, setFiling] = useState<DocumentItem | null>(null);
+  const desktop = isDesktop();
 
   const filtered = useMemo(() => {
     const q = foldCase(query.trim());
@@ -152,7 +158,39 @@ export default function DocumentsPage() {
                       <SubjectBadge name={subject.shortName} color={subject.color} size="sm" />
                     ) : null}
                   </span>
+                  {doc.localPath ? (
+                    <span className="mt-1 block truncate text-[11px] text-accent" title={doc.localPath}>
+                      {doc.localPath}
+                    </span>
+                  ) : null}
                 </button>
+                {desktop && doc.kind !== 'link' ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-ghost h-9 w-9 shrink-0 rounded-xl p-0"
+                      aria-label={`Classer ${doc.name}`}
+                      title="Classer dans une matière / un cours"
+                      onClick={() => setFiling(doc)}
+                    >
+                      <FolderInput size={16} />
+                    </button>
+                    {doc.localPath ? (
+                      <button
+                        type="button"
+                        className="btn-ghost h-9 w-9 shrink-0 rounded-xl p-0"
+                        aria-label={`Ouvrir l’emplacement de ${doc.name}`}
+                        title="Ouvrir l’emplacement du fichier"
+                        onClick={async () => {
+                          const ok = await revealLocalFile(doc.localPath!);
+                          if (!ok) toast('Fichier introuvable sur le disque');
+                        }}
+                      >
+                        <FolderOpen size={16} />
+                      </button>
+                    ) : null}
+                  </>
+                ) : null}
                 <button
                   type="button"
                   className="btn-ghost h-9 w-9 shrink-0 rounded-xl p-0"
@@ -169,9 +207,11 @@ export default function DocumentsPage() {
                   aria-label={`Supprimer ${doc.name}`}
                   onClick={async () => {
                     const snapshot = doc;
-                    await db.documents.delete(doc.id);
+                    await deleteDocumentEverywhere(doc.id);
                     toastUndo('Document supprimé', async () => {
-                      await db.documents.put(snapshot);
+                      // Le fichier est réécrit sur le disque à l'annulation.
+                      await db.documents.put({ ...snapshot, localPath: null });
+                      await refileDocument(snapshot.id);
                     });
                   }}
                 >
@@ -182,6 +222,12 @@ export default function DocumentsPage() {
           })}
         </ul>
       )}
+
+      <FileDocumentModal
+        document={filing}
+        open={Boolean(filing)}
+        onClose={() => setFiling(null)}
+      />
     </>
   );
 }

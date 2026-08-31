@@ -26,6 +26,7 @@ export function defaultSettings(overrides: Partial<UserSettings> = {}): UserSett
     dayEndHour: 19,
     onboardingDone: false,
     demoDataLoaded: false,
+    showAppName: true,
     notifications: { ...DEFAULT_NOTIFICATION_PREFS },
     createdAt: ts,
     updatedAt: ts,

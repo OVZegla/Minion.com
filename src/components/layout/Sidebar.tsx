@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { PanelLeft, PanelLeftClose, Plus, Search, Settings } from 'lucide-react';
 import { NAV_GROUPS, SETTINGS_ITEM, type NavItem } from './nav';
 import { useUi } from './AppProviders';
-import { usePendingInboxCount, useTasks } from '@/hooks/data';
+import { usePendingInboxCount, useSettings, useTasks } from '@/hooks/data';
 import { todayISO } from '@/lib/dates';
 
 function isActive(pathname: string, href: string): boolean {
@@ -18,6 +18,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar, openSearch, openQuickAdd } = useUi();
   const inboxCount = usePendingInboxCount();
+  const settings = useSettings();
+  const showAppName = settings?.showAppName ?? true;
   const tasks = useTasks();
   const today = todayISO();
   const dueTodayCount = (tasks ?? []).filter(
@@ -45,7 +47,7 @@ export function Sidebar() {
           >
             m
           </span>
-          {!sidebarCollapsed ? (
+          {!sidebarCollapsed && showAppName ? (
             <span className="truncate text-[15px] font-semibold tracking-tight text-ink">
               minion<span className="text-muted">.com</span>
             </span>

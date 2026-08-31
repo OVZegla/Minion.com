@@ -237,6 +237,51 @@ connexion. L'installeur Windows est un `.exe` classique.
 Une version **portable** (`minion.com-1.0.0-portable.exe`) est aussi produite :
 elle ne s'installe pas et peut tourner depuis une clé USB.
 
+### Classement automatique des documents
+
+Dans l'application de bureau, chaque document ajouté est **aussi écrit dans les
+dossiers de l'ordinateur**, rangé tout seul :
+
+```
+<dossier choisi>/<catégorie>/<matière>-chapitre<N>/<fichier>
+
+cours/droit-des-affaires-chapitre1/CM03.pdf
+fiches/droit-constitutionnel/les-sources.pdf
+examens/comptabilite-generale/annales.pdf
+matieres/intro-droit/plan-de-cours.pdf
+divers/reglement-interieur.pdf
+```
+
+- La **catégorie** vient du rattachement du document : un document lié à un
+  cours va dans `cours/`, lié à une fiche dans `fiches/`, à un examen dans
+  `examens/`, à une SAÉ dans `sae/`, etc.
+- Le **chapitre** vient du cours auquel le document est rattaché. Sans cours,
+  le document est rangé dans le dossier de la matière ; sans matière, dans
+  `divers/`.
+- Les **liens** n'ont pas de fichier : rien n'est écrit pour eux.
+- Un nom déjà pris devient `CM03 (2).pdf` : aucun fichier n'est jamais écrasé.
+
+Réglages dans **Paramètres → Mes fichiers sur l'ordinateur** : choisir le
+dossier (par défaut `Documents/minion.com`), désactiver le classement, ouvrir le
+dossier, ou **tout reclasser** après un changement.
+
+Depuis la page Documents, le bouton « Classer » permet de rattacher un document
+à une autre matière ou à un autre cours : **le fichier est réellement déplacé**
+sur le disque, et le chemin de destination est affiché avant validation.
+
+Côté sécurité, la page n'a aucun accès au disque : elle envoie un dossier
+relatif, un nom et des octets, et c'est le processus principal qui décide où
+écrire. Chaque segment de chemin y est réassaini et le résultat doit rester
+sous le dossier choisi — impossible d'écrire ailleurs.
+
+### Une origine fixe pour ne jamais perdre les données
+
+Le serveur interne écoute sur un port libre, donc différent à chaque lancement.
+Si la fenêtre chargeait `http://127.0.0.1:<port>`, l'origine changerait à chaque
+ouverture — et IndexedDB, cloisonné par origine, repartirait vide. La fenêtre
+charge donc un schéma dédié et constant, `minion://app`, relayé vers le serveur
+local : les données restent attachées à cette origine pour toujours.
+
 ### Où sont les données ?
 
 Dans le profil Windows de l'utilisatrice :
@@ -287,6 +332,15 @@ Les installeurs ne sont pas signés : c'est ce qui déclenche l'avertissement
 SmartScreen au premier lancement. Pour le supprimer, il faut un certificat
 Authenticode (payant) et renseigner les variables `CSC_LINK` et
 `CSC_KEY_PASSWORD` avant `npm run dist:win`.
+
+---
+
+## Discrétion
+
+Un réglage **Paramètres → Apparence → « Afficher le nom minion.com en haut de
+l'application »** masque le nom dans la barre latérale et l'en-tête mobile ;
+seule la pastille reste, et la navigation continue de fonctionner. Pratique pour
+travailler en cours sans afficher le nom de l'application.
 
 ---
 

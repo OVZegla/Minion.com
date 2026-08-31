@@ -49,6 +49,8 @@ export interface UserSettings {
   dayEndHour: number;
   onboardingDone: boolean;
   demoDataLoaded: boolean;
+  /** Affiche « minion.com » en haut de l'application (discretion en cours). */
+  showAppName: boolean;
   notifications: NotificationPrefs;
   createdAt: DateTimeISO;
   updatedAt: DateTimeISO;
@@ -408,6 +410,11 @@ export interface DocumentItem {
    */
   blob?: Blob;
   storageRef?: string | null;
+  /**
+   * Chemin du fichier reellement ecrit sur le disque par l'application de
+   * bureau (classement automatique). Absent sur le web.
+   */
+  localPath?: string | null;
   subjectId?: ID | null;
   courseId?: ID | null;
   taskId?: ID | null;

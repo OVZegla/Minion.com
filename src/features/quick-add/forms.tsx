@@ -14,10 +14,12 @@ import {
 import { newId } from '@/lib/id';
 import { nowISO, todayISO } from '@/lib/dates';
 import { parseQuickInput } from '@/lib/quick-parse';
-import { useChapters, useSubjects } from '@/hooks/data';
+import { useChapters, useCourses, useSubjects } from '@/hooks/data';
 import { useToast } from '@/components/ui/Toast';
 import { DateField, PrioritySelect, SubjectSelect, TimeField, ColorPicker } from '@/components/ui/inputs';
 import { ALLOWED_MIME } from '@/db/backup';
+import { fileDocument } from '@/features/documents/filing';
+import { isDesktop } from '@/lib/desktop';
 import type { CourseKind, DocKind, EventType, Priority, SubjectColorKey, TaskType } from '@/types';
 
 export interface FormProps {
@@ -968,6 +970,7 @@ export function detectKind(file: File): DocKind {
 export function DocumentForm({ onDone }: FormProps) {
   const { toast } = useToast();
   const [subjectId, setSubjectId] = useState<string | null>(null);
+  const [courseId, setCourseId] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkName, setLinkName] = useState('');
@@ -990,18 +993,26 @@ export function DocumentForm({ onDone }: FormProps) {
             setError('Le fichier dépasse 15 Mo.');
             return;
           }
+          const id = newId('doc');
           await db.documents.put({
-            id: newId('doc'),
+            id,
             name: file.name,
             kind: detectKind(file),
             size: file.size,
             mimeType: file.type,
             blob: file,
             storageRef: null,
+            localPath: null,
             subjectId,
+            courseId,
             favorite: false,
             createdAt: nowISO(),
           });
+          // Classement automatique dans les dossiers de l'ordinateur.
+          const filed = await fileDocument(id);
+          toast(filed?.path ? `Document rangé dans ${filed.folder}` : 'Document ajouté');
+          onDone();
+          return;
         } else {
           let url: URL;
           try {
@@ -1021,7 +1032,9 @@ export function DocumentForm({ onDone }: FormProps) {
             size: 0,
             url: url.toString(),
             storageRef: null,
+            localPath: null,
             subjectId,
+            courseId: null,
             favorite: false,
             createdAt: nowISO(),
           });
@@ -1089,10 +1102,57 @@ export function DocumentForm({ onDone }: FormProps) {
         </>
       )}
 
-      <SubjectSelect value={subjectId} onChange={setSubjectId} />
+      <SubjectSelect
+        value={subjectId}
+        onChange={(value) => {
+          setSubjectId(value);
+          setCourseId(null);
+        }}
+      />
+      {tab === 'file' ? <DocumentCourseSelect subjectId={subjectId} value={courseId} onChange={setCourseId} /> : null}
+      {tab === 'file' && isDesktop() ? (
+        <p className="rounded-xl bg-surface2 px-3 py-2 text-xs text-muted">
+          Le fichier sera rangé automatiquement dans tes dossiers, par matière et
+          par chapitre.
+        </p>
+      ) : null}
       {error ? <p className="text-sm text-[color:var(--danger)]">{error}</p> : null}
       <Actions onDone={onDone} />
     </form>
+  );
+}
+
+/** Choix du cours : c'est lui qui donne le chapitre pour le classement. */
+function DocumentCourseSelect({
+  subjectId,
+  value,
+  onChange,
+}: {
+  subjectId: string | null;
+  value: string | null;
+  onChange: (value: string | null) => void;
+}) {
+  const courses = useCourses(subjectId);
+  if (!subjectId || (courses ?? []).length === 0) return null;
+  return (
+    <div>
+      <label className="label" htmlFor="qa-doc-course">
+        Cours (facultatif)
+      </label>
+      <select
+        id="qa-doc-course"
+        className="field"
+        value={value ?? ''}
+        onChange={(event) => onChange(event.target.value || null)}
+      >
+        <option value="">Aucun cours</option>
+        {(courses ?? []).map((course) => (
+          <option key={course.id} value={course.id}>
+            {String(course.number).padStart(2, '0')} — {course.title}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 

@@ -13,10 +13,13 @@ import { NotificationsButton } from '@/features/notifications/NotificationsButto
 import { MobileMenu } from './MobileMenu';
 import { useGlobalHotkeys } from '@/hooks/useHotkeys';
 import { Spinner } from '@/components/ui';
+import { useSettings } from '@/hooks/data';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { openSearch, openQuickAdd, booting } = useUi();
   const [menuOpen, setMenuOpen] = useState(false);
+  const settings = useSettings();
+  const showAppName = settings?.showAppName ?? true;
   useGlobalHotkeys({ onSearch: openSearch, onQuickAdd: () => openQuickAdd() });
 
   return (
@@ -41,9 +44,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               m
             </span>
-            <span className="text-[15px] font-semibold tracking-tight">
-              minion<span className="text-muted">.com</span>
-            </span>
+            {showAppName ? (
+              <span className="text-[15px] font-semibold tracking-tight">
+                minion<span className="text-muted">.com</span>
+              </span>
+            ) : null}
           </Link>
           <div className="ml-auto flex items-center gap-1">
             <NotificationsButton />

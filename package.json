@@ -14,6 +14,7 @@
     "icons": "node scripts/generate-icons.mjs",
     "qa:smoke": "node qa/smoke.mjs",
     "qa:scenarios": "node qa/scenarios.mjs",
+    "qa:autosave": "node qa/autosave.mjs",
     "desktop:build": "node scripts/build-desktop.mjs",
     "desktop:start": "electron .",
     "desktop:dev": "npm run desktop:build && electron .",

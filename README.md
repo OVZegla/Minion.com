@@ -116,6 +116,19 @@ qa/                       scripts de vérification navigateur
 
 ## Fonctionnement des données
 
+### Sauvegarde automatique
+
+Il n'y a aucun bouton « Enregistrer » dans l'application. Tout ce qui est tapé
+dans un cours, une fiche, une méthode ou une SAÉ est écrit dans la base locale
+peu après la frappe, et l'indicateur affiche « Enregistrement… » puis
+« Enregistré ».
+
+La règle importante est dans `src/lib/autosave.ts` : une écriture en attente
+n'est **jamais annulée**. Quand la page est quittée, l'onglet masqué ou la
+fenêtre fermée avant la fin du délai, la dernière valeur est écrite tout de
+suite (`flush`) au lieu d'être perdue. `qa/autosave.mjs` et la vérification
+« saisie non terminée » de `qa/desktop.mjs` couvrent précisément ce cas.
+
 ### Modèle
 
 24 entités : `UserSettings`, `AcademicYear`, `Semester`, `Subject`, `Chapter`,

@@ -184,6 +184,16 @@ await page.evaluate(async (title) => {
 }, MARKER);
 await page.waitForTimeout(800);
 
+/* ---------- Saisie non terminée au moment de fermer la fenêtre ---------- */
+
+const TYPED = 'Note tapee juste avant la fermeture';
+await go(page, '/cours');
+await page.locator('a[href^="/cours/"]').first().click();
+await page.locator('input[aria-label="Titre du cours"]').waitFor({ state: 'visible', timeout: 20000 });
+await page.waitForTimeout(800);
+const typedRoute = new URL(page.url()).pathname;
+await page.locator('input[aria-label="Titre du cours"]').fill(TYPED);
+// On ferme tout de suite : le délai de sauvegarde n'a pas eu le temps de s'écouler.
 await app.close();
 await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -198,6 +208,16 @@ await page.getByRole('tab', { name: 'À venir' }).click();
 await page.waitForTimeout(1200);
 body = await page.textContent('body');
 check('Les données survivent à la fermeture de l’application', body.includes(MARKER));
+
+await go(page, typedRoute);
+await page.locator('input[aria-label="Titre du cours"]').waitFor({ state: 'visible', timeout: 20000 });
+await page.waitForTimeout(800);
+const typedBack = await page.locator('input[aria-label="Titre du cours"]').inputValue();
+check(
+  'Une saisie non terminée est enregistrée à la fermeture de la fenêtre',
+  typedBack === TYPED,
+  `trouvé « ${typedBack} »`,
+);
 
 const secondSessionDocs = await page.evaluate(async () => {
   const open = indexedDB.open('minion-com');

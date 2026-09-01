@@ -56,13 +56,16 @@ export async function refileDocument(documentId: string): Promise<FilingResult |
   const folder = await folderFor(document);
   const fileName = safeFileName(document.name);
 
-  const path = document.localPath
+  // On déplace le fichier existant. S'il a disparu du disque (dossier vidé,
+  // fichier supprimé ou déplacé à la main), on le réécrit depuis le contenu
+  // conservé dans l'application plutôt que de laisser le document sans fichier.
+  let path = document.localPath
     ? await moveInLibrary(document.localPath, folder, fileName)
-    : document.blob
-      ? await saveToLibrary(folder, fileName, document.blob)
-      : null;
+    : null;
+  if (!path && document.blob) path = await saveToLibrary(folder, fileName, document.blob);
 
   if (path) await db.documents.update(documentId, { localPath: path });
+  else if (document.localPath) await db.documents.update(documentId, { localPath: null });
   return { path, folder };
 }
 

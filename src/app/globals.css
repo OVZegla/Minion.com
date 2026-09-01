@@ -168,3 +168,45 @@ body {
   --c-soft: var(--c-soft-dark);
   --c-text: var(--c-text-dark);
 }
+
+/* Mise en forme du texte saisi dans les cours et les fiches.
+   Les couleurs sont des classes et non des styles en dur, pour rester
+   lisibles aussi bien en mode clair qu'en mode sombre. */
+.rt-c-jaune { color: #a16207; }
+.rt-c-rouge { color: #c2261f; }
+.rt-c-vert { color: #15803d; }
+.rt-c-bleu { color: #1d4ed8; }
+.rt-c-violet { color: #7e22ce; }
+.rt-c-gris { color: #6b7280; }
+
+.dark .rt-c-jaune { color: #fbbf24; }
+.dark .rt-c-rouge { color: #f87171; }
+.dark .rt-c-vert { color: #4ade80; }
+.dark .rt-c-bleu { color: #7cb0ff; }
+.dark .rt-c-violet { color: #c084fc; }
+.dark .rt-c-gris { color: #a1a1aa; }
+
+.rt-m-jaune,
+.rt-m-vert,
+.rt-m-bleu,
+.rt-m-rose {
+  border-radius: 3px;
+  padding: 0 1px;
+  color: #241f18;
+}
+.rt-m-jaune { background-color: #fef08a; }
+.rt-m-vert { background-color: #bbf7d0; }
+.rt-m-bleu { background-color: #bfdbfe; }
+.rt-m-rose { background-color: #fbcfe8; }
+
+.dark .rt-m-jaune { background-color: #a3801a; color: #fdf6e3; }
+.dark .rt-m-vert { background-color: #2f6b4a; color: #eafaf1; }
+.dark .rt-m-bleu { background-color: #2f5488; color: #eaf1fb; }
+.dark .rt-m-rose { background-color: #8a4468; color: #fbeaf3; }
+
+.rt-s-petit { font-size: 0.82em; }
+.rt-s-grand { font-size: 1.22em; }
+.rt-s-tres-grand { font-size: 1.5em; }
+
+.rt-f-serif { font-family: Georgia, 'Times New Roman', serif; }
+.rt-f-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }

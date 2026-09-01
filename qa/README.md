@@ -9,6 +9,7 @@ npx next start -p 3120
 node qa/smoke.mjs       # toutes les pages répondent, aucune erreur console
 node qa/scenarios.mjs   # les 12 scénarios fonctionnels de bout en bout
 node qa/autosave.mjs    # rien n'est perdu quand on quitte une page en pleine frappe
+node qa/editor.mjs      # éditeur : pas de saut d'écran, mise en forme, flashcards
 ```
 
 `smoke.mjs` parcourt les 22 routes et échoue à la moindre erreur console.
@@ -21,6 +22,21 @@ recherche, exporte puis réimporte les données, et vérifie la vue mobile.
 revérifie le contenu enregistré. C'est la garantie qu'il n'y a jamais de bouton
 « Enregistrer » à cliquer. Ces trois cas échouaient avant la correction du
 moteur de sauvegarde (`src/lib/autosave.ts`).
+
+`editor.mjs` couvre l'éditeur de cours et de fiches :
+
+* **Saut d'écran.** Il remplit une page longue, descend dedans, tape, efface, et
+  vérifie que `window.scrollY` ne bouge pas. L'ancien éditeur remontait la vue
+  de 320 px dès la première frappe (mesuré : `scrollY 1360 -> 1040`) ; c'est ce
+  scénario précis qui l'a mis en évidence, une frappe courte ne suffisait pas.
+* **Mise en forme.** Gras, italique, souligné, couleur et surlignage sont
+  appliqués puis relus dans IndexedDB : on vérifie qu'ils sont stockés en
+  classes de thème (`rt-c-rouge`) et **jamais** en style en dur, et qu'ils
+  survivent au rechargement.
+* **Collage.** Un presse-papier contenant `<img onerror=…>` est collé : aucune
+  balise n'entre dans le document et rien ne s'exécute.
+* **Bouton Enregistrer et Ctrl+S**, champs de cours modifiables (matière,
+  numéro, enseignant, salle), création d'une flashcard.
 
 ## Application de bureau
 

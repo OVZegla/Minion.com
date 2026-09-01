@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Copy, Plus, Printer, Star, Trash2, X } from 'lucide-react';
 import { db } from '@/db/db';
 import { deleteStudySheetCascade, duplicateStudySheet } from '@/db/repo';
-import { useChapters, useStudySheet, useSubject } from '@/hooks/data';
+import { useChapters, useStudySheet, useSubject, useSubjects } from '@/hooks/data';
+import { RichText, RichToolbar } from '@/features/courses/RichText';
 import { EmptyState, MasteryPill, SubjectBadge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { SaveIndicatorLabel, useAutosave } from '@/hooks/useAutosave';
+import { useAutosave } from '@/hooks/useAutosave';
+import { SaveButton } from '@/components/ui/SaveButton';
 import { nextMastery } from '@/lib/progress';
 import { newId } from '@/lib/id';
 import { nowISO } from '@/lib/dates';
@@ -23,6 +25,7 @@ export default function SheetPage({ params }: { params: Promise<{ id: string }> 
   const sheet = useStudySheet(id);
   const subject = useSubject(sheet?.subjectId);
   const chapters = useChapters(sheet?.subjectId);
+  const subjects = useSubjects();
 
   const [title, setTitle] = useState('');
   const [sections, setSections] = useState<StudySheetSection[]>([]);
@@ -37,7 +40,7 @@ export default function SheetPage({ params }: { params: Promise<{ id: string }> 
   }, [sheet, ready]);
 
   const payload = useMemo(() => ({ title, sections }), [title, sections]);
-  const saveState = useAutosave(
+  const autosave = useAutosave(
     payload,
     async (value) => {
       await db.studySheets.update(id, {
@@ -63,7 +66,6 @@ export default function SheetPage({ params }: { params: Promise<{ id: string }> 
     );
   }
 
-  const saveLabel = SaveIndicatorLabel(saveState);
 
   return (
     <>
@@ -73,7 +75,7 @@ export default function SheetPage({ params }: { params: Promise<{ id: string }> 
           Mes fiches
         </Link>
         <div className="flex items-center gap-1">
-          {saveLabel ? <span className="mr-1 text-[12px] text-muted">{saveLabel}</span> : null}
+          <SaveButton autosave={autosave} />
           <button
             type="button"
             className="btn-ghost h-9 w-9 rounded-xl p-0"
@@ -136,27 +138,52 @@ export default function SheetPage({ params }: { params: Promise<{ id: string }> 
           onChange={(event) => setTitle(event.target.value)}
           aria-label="Titre de la fiche"
         />
-        {(chapters ?? []).length > 0 ? (
+        <div className="no-print mt-3 flex flex-wrap gap-2">
           <select
-            className="no-print mt-3 field max-w-sm"
-            value={sheet.chapterId ?? ''}
-            aria-label="Chapitre lié"
+            className="field max-w-[220px]"
+            value={sheet.subjectId}
+            aria-label="Matière de la fiche"
             onChange={async (event) => {
+              // La fiche change de matière : son chapitre appartenait à
+              // l'ancienne, on le détache.
+              if (!event.target.value) return;
               await db.studySheets.update(id, {
-                chapterId: event.target.value || null,
+                subjectId: event.target.value,
+                chapterId: null,
                 updatedAt: nowISO(),
               });
             }}
           >
-            <option value="">Aucun chapitre</option>
-            {(chapters ?? []).map((chapter) => (
-              <option key={chapter.id} value={chapter.id}>
-                {chapter.title}
+            {(subjects ?? []).map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.name}
               </option>
             ))}
           </select>
-        ) : null}
+          {(chapters ?? []).length > 0 ? (
+            <select
+              className="field max-w-[220px]"
+              value={sheet.chapterId ?? ''}
+              aria-label="Chapitre lié"
+              onChange={async (event) => {
+                await db.studySheets.update(id, {
+                  chapterId: event.target.value || null,
+                  updatedAt: nowISO(),
+                });
+              }}
+            >
+              <option value="">Aucun chapitre</option>
+              {(chapters ?? []).map((chapter) => (
+                <option key={chapter.id} value={chapter.id}>
+                  {chapter.title}
+                </option>
+              ))}
+            </select>
+          ) : null}
+        </div>
       </header>
+
+      <RichToolbar className="no-print mb-3" />
 
       <div className="space-y-4">
         {sections.map((section, index) => (
@@ -181,24 +208,15 @@ export default function SheetPage({ params }: { params: Promise<{ id: string }> 
                 <X size={14} />
               </button>
             </div>
-            <textarea
-              className="mt-2 w-full resize-none bg-transparent text-[15px] leading-relaxed text-ink outline-none placeholder:text-muted/60"
-              rows={3}
+            <RichText
+              className="mt-2 text-[15px] leading-relaxed"
               value={section.content}
               placeholder="Écris ici…"
-              aria-label={`Contenu de la section ${section.title}`}
-              onChange={(event) => {
+              ariaLabel={`Contenu de la section ${section.title}`}
+              onChange={(content) => {
                 const copy = [...sections];
-                copy[index] = { ...section, content: event.target.value };
+                copy[index] = { ...section, content };
                 setSections(copy);
-                event.target.style.height = 'auto';
-                event.target.style.height = `${event.target.scrollHeight}px`;
-              }}
-              ref={(node) => {
-                if (node) {
-                  node.style.height = 'auto';
-                  node.style.height = `${node.scrollHeight}px`;
-                }
               }}
             />
           </section>

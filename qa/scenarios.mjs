@@ -47,7 +47,31 @@ for (const title of ['Les actes administratifs', 'Le service public', 'La respon
 await page.getByRole('button', { name: 'Fermer' }).first().click().catch(() => {});
 await page.waitForTimeout(300);
 let txt = await page.textContent('body');
-check('S5a — 3 chapitres ajoutés', txt.includes('Les actes administratifs') && txt.includes('La responsabilité'));
+// Les titres de chapitre sont modifiables sur place : ils vivent dans des
+// champs de saisie, donc pas dans le texte de la page.
+const titresChapitres = await page.$$eval('input[aria-label^="Titre du chapitre"]', (nodes) =>
+  nodes.map((node) => node.value),
+);
+check(
+  'S5a — 3 chapitres ajoutés',
+  titresChapitres.includes('Les actes administratifs') && titresChapitres.includes('La responsabilité'),
+  titresChapitres.join(' | '),
+);
+
+/* S5b — un titre de chapitre se corrige sur place */
+const premierChapitre = page.locator('input[aria-label^="Titre du chapitre"]').first();
+await premierChapitre.fill('Les actes administratifs unilatéraux');
+await page.waitForTimeout(800);
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(1200);
+const apresRechargement = await page.$$eval('input[aria-label^="Titre du chapitre"]', (nodes) =>
+  nodes.map((node) => node.value),
+);
+check(
+  'S5b — titre de chapitre corrigé et conservé',
+  apresRechargement.includes('Les actes administratifs unilatéraux'),
+  apresRechargement.join(' | '),
+);
 
 /* SCENARIO 8 — changer l'état de maîtrise et voir la progression bouger */
 const before = await page.textContent('body');

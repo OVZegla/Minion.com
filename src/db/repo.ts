@@ -8,6 +8,7 @@ import type {
   Course,
   DocumentItem,
   Exam,
+  Flashcard,
   ID,
   RevisionSession,
   SAE,
@@ -167,6 +168,39 @@ export async function createChapter(subjectId: ID, title: string, order?: number
   };
   await db.chapters.put(chapter);
   return chapter.id;
+}
+
+/* ---------------------------- Flashcards ---------------------------- */
+
+/** Cree une carte de revision. Question et reponse sont du texte simple. */
+export async function createFlashcard(input: {
+  subjectId: ID;
+  question: string;
+  answer: string;
+  chapterId?: ID | null;
+  courseId?: ID | null;
+  sheetId?: ID | null;
+}): Promise<ID> {
+  const ts = nowISO();
+  const card: Flashcard = {
+    id: newId('fcd'),
+    subjectId: input.subjectId,
+    chapterId: input.chapterId ?? null,
+    courseId: input.courseId ?? null,
+    sheetId: input.sheetId ?? null,
+    question: input.question.trim(),
+    answer: input.answer.trim(),
+    mastery: 'not_started',
+    lastReviewedAt: null,
+    dueAt: null,
+    intervalDays: null,
+    ease: null,
+    reviewCount: 0,
+    createdAt: ts,
+    updatedAt: ts,
+  };
+  await db.flashcards.put(card);
+  return card.id;
 }
 
 export async function deleteChapterCascade(chapterId: ID): Promise<void> {

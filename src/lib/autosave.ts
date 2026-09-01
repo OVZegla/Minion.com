@@ -48,6 +48,16 @@ export function createAutosave<T>({
   let pending = false;
   let value: T | undefined;
   let last: Promise<void> = Promise.resolve();
+  let announced: SaveState | null = null;
+
+  // On ne signale qu'un vrai changement d'état. Sans ce garde-fou, chaque
+  // lettre tapée annonçait « en cours d'enregistrement » alors que c'était
+  // déjà le cas, ce qui redessinait toute la page à chaque frappe.
+  const announce = (state: SaveState) => {
+    if (state === announced) return;
+    announced = state;
+    onState(state);
+  };
 
   const cancelTimer = () => {
     if (timer !== null) {
@@ -62,8 +72,8 @@ export function createAutosave<T>({
     cancelTimer();
     const snapshot = value as T;
     last = Promise.resolve(save(snapshot)).then(() => {
-      onState('saved');
-      timers.set(() => onState('idle'), savedFor);
+      announce('saved');
+      timers.set(() => announce('idle'), savedFor);
     });
     return last;
   };
@@ -72,7 +82,7 @@ export function createAutosave<T>({
     schedule(next, delay = defaultDelay) {
       value = next;
       pending = true;
-      onState('saving');
+      announce('saving');
       cancelTimer();
       timer = timers.set(() => {
         timer = null;

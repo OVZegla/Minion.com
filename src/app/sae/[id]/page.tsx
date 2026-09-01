@@ -10,7 +10,8 @@ import { useSAE, useSAETasks, useSubjectMap, useSubjects, useTasks } from '@/hoo
 import { EmptyState, PageHeader, ProgressBar, StatusBadge, SubjectBadge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { SaveIndicatorLabel, useAutosave } from '@/hooks/useAutosave';
+import { useAutosave } from '@/hooks/useAutosave';
+import { SaveButton } from '@/components/ui/SaveButton';
 import { newId } from '@/lib/id';
 import { fmtDayFull, nowISO, relativeCountdown } from '@/lib/dates';
 import { SAE_STATUS_LABEL } from '@/features/sae/constants';
@@ -48,7 +49,7 @@ export default function SAEDetailPage({ params }: { params: Promise<{ id: string
   }, [sae, ready]);
 
   const payload = useMemo(() => ({ description, notes }), [description, notes]);
-  const saveState = useAutosave(
+  const autosave = useAutosave(
     payload,
     async (value) => {
       await db.saes.update(id, {
@@ -78,7 +79,6 @@ export default function SAEDetailPage({ params }: { params: Promise<{ id: string
   const total = (tasks ?? []).length;
   const percent = total ? Math.round((done / total) * 100) : 0;
   const related = (linkedTasks ?? []).filter((task) => task.saeId === id);
-  const saveLabel = SaveIndicatorLabel(saveState);
 
   return (
     <>
@@ -88,7 +88,7 @@ export default function SAEDetailPage({ params }: { params: Promise<{ id: string
           SAÉ
         </Link>
         <div className="flex items-center gap-2">
-          {saveLabel ? <span className="text-[12px] text-muted">{saveLabel}</span> : null}
+          <SaveButton autosave={autosave} />
           <button
             type="button"
             className="btn-ghost h-9 w-9 rounded-xl p-0"

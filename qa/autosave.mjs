@@ -55,22 +55,24 @@ check('C — titre conserve apres pause normale', titreC === marker3, `attendu "
 
 /* CAS D — texte tape dans un bloc de cours, navigation immediate */
 const marker4 = 'PREUVE-BLOC-' + Date.now();
-if (!(await page.locator('textarea[placeholder="Écris tes notes…"]').count())) {
+const SEL_TEXTE = '[role=textbox][aria-label="Texte"]';
+if (!(await page.locator(SEL_TEXTE).count())) {
   await page.getByRole('button', { name: 'Ajouter un bloc' }).click();
   await page.waitForTimeout(300);
   await page.getByRole('button', { name: 'Texte', exact: true }).first().click();
   await page.waitForTimeout(1200);
 }
-const bloc = page.locator('textarea[placeholder="Écris tes notes…"]').first();
+const bloc = page.locator(SEL_TEXTE).first();
 if (await bloc.count()) {
-  await bloc.fill(marker4);
+  await bloc.click();
+  await page.keyboard.type(marker4);
   await page.locator('a[href="/aujourdhui"], a[href="/"]').first().click();
   await page.waitForTimeout(2500);
   await page.goto(courseUrl, { waitUntil: 'networkidle' });
   await page.locator('input[aria-label="Titre du cours"]').waitFor({ state: 'visible', timeout: 15000 });
   await page.waitForTimeout(1200);
-  const corps = await page.textContent('body');
-  check('D — notes du cours conservees apres navigation immediate', corps.includes(marker4));
+  const corps = await page.$$eval(SEL_TEXTE, (nodes) => nodes.map((n) => n.textContent).join(' '));
+  check('D — notes du cours conservees apres navigation immediate', corps.includes(marker4), corps.slice(0, 80));
 } else {
   check('D — bloc de notes introuvable', false);
 }

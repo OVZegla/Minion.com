@@ -98,6 +98,29 @@ describe('createAutosave', () => {
     expect(states).toEqual(['saving', 'saved', 'idle']);
   });
 
+  it('n’annonce pas deux fois le même état', async () => {
+    const { timers, advance } = fakeTimers();
+    const states: string[] = [];
+    const engine = createAutosave<string>({
+      save: async () => {},
+      onState: (s) => states.push(s),
+      timers,
+    });
+
+    // Une frappe = un appel à schedule. Trente lettres ne doivent produire
+    // qu'une seule annonce, sinon toute la page est redessinée à chaque lettre
+    // et React finit par refuser la mise à jour (« Maximum update depth »).
+    for (let i = 0; i < 30; i += 1) engine.schedule('a'.repeat(i + 1));
+    expect(states).toEqual(['saving']);
+
+    advance(600);
+    await engine.flush();
+    expect(states).toEqual(['saving', 'saved']);
+
+    for (let i = 0; i < 10; i += 1) engine.schedule('b'.repeat(i + 1));
+    expect(states).toEqual(['saving', 'saved', 'saving']);
+  });
+
   it('reste utilisable après un enregistrement forcé', async () => {
     const { timers, advance } = fakeTimers();
     const writes: string[] = [];

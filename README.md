@@ -129,6 +129,23 @@ fenêtre fermée avant la fin du délai, la dernière valeur est écrite tout de
 suite (`flush`) au lieu d'être perdue. `qa/autosave.mjs` et la vérification
 « saisie non terminée » de `qa/desktop.mjs` couvrent précisément ce cas.
 
+### Mise en forme du texte
+
+Dans les cours et les fiches, le texte se met en forme : gras, italique,
+souligné, barré, couleur, surlignage, taille et police. La barre reste collée
+en haut de l'éditeur et agit sur la sélection courante.
+
+Le contenu est stocké dans un HTML minuscule, **reconstruit** par
+`src/lib/richtext.ts` à chaque lecture comme à chaque écriture : une balise
+inconnue perd sa balise et garde son texte, un attribut non prévu disparaît, et
+rien de ce qui pourrait s'exécuter ne survit. Le collage est converti en texte
+brut par l'éditeur, donc en usage normal aucun contenu extérieur n'entre.
+`tests/richtext.test.ts` couvre les deux côtés : ce qui doit passer, et ce qui
+ne doit jamais passer.
+
+Les couleurs sont des **classes** (`rt-c-rouge`, `rt-m-jaune`) et non des
+styles en dur : elles restent lisibles en mode clair comme en mode sombre.
+
 ### Modèle
 
 24 entités : `UserSettings`, `AcademicYear`, `Semester`, `Subject`, `Chapter`,

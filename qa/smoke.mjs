@@ -37,7 +37,7 @@ step('Prochains examens présents', body.includes('Prochains examens'));
 step('Cette semaine présente', body.includes('Cette semaine'));
 
 // Navigate pages
-const routes = ['/calendrier','/matieres','/cours','/a-faire','/revisions','/fiches','/examens','/sae','/documents','/methodes','/jurisprudence','/lexique','/a-classer','/focus','/resultats','/parametres','/mon-annee'];
+const routes = ['/calendrier','/matieres','/cours','/a-faire','/revisions','/flashcards','/fiches','/examens','/sae','/documents','/methodes','/jurisprudence','/lexique','/a-classer','/focus','/resultats','/parametres','/mon-annee'];
 for (const r of routes) {
   const res = await page.goto(BASE + r, { waitUntil: 'networkidle' });
   await page.waitForTimeout(600);

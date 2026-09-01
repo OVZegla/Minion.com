@@ -249,6 +249,10 @@ export default function RevisionsPage() {
                 <Play size={16} />
                 Réviser {deck.length} carte{deck.length > 1 ? 's' : ''}
               </button>
+              <Link href="/flashcards" className="btn-soft">
+                <Layers size={16} />
+                Écrire et gérer mes cartes
+              </Link>
             </div>
           </section>
         </div>

@@ -6,6 +6,7 @@ import { db } from '@/db/db';
 import {
   createCourse,
   createExam,
+  createFlashcard,
   createRevisionSession,
   createStudySheet,
   createSubject,
@@ -708,6 +709,80 @@ export function InboxForm({ onDone }: FormProps) {
 }
 
 /* ------------------------------- Fiche ------------------------------- */
+
+/** Nouvelle flashcard : une question, une réponse, une matière. */
+export function FlashcardForm({ onDone }: FormProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [subjectId, setSubjectId] = useState<string | null>(null);
+  const [chapterId, setChapterId] = useState<string | null>(null);
+  const chapters = useChapters(subjectId);
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        if (!question.trim() || !answer.trim() || !subjectId) return;
+        await createFlashcard({ subjectId, chapterId, question, answer });
+        toast('Carte ajoutée');
+        onDone();
+        router.push('/flashcards');
+      }}
+    >
+      <div>
+        <label className="label" htmlFor="qa-card-question">
+          Question
+        </label>
+        <textarea
+          id="qa-card-question"
+          className="field min-h-[64px]"
+          placeholder="Ex. Qu’est-ce que la hiérarchie des normes ?"
+          value={question}
+          onChange={(event) => setQuestion(event.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label className="label" htmlFor="qa-card-answer">
+          Réponse
+        </label>
+        <textarea
+          id="qa-card-answer"
+          className="field min-h-[64px]"
+          placeholder="Ta réponse, avec tes mots"
+          value={answer}
+          onChange={(event) => setAnswer(event.target.value)}
+          required
+        />
+      </div>
+      <SubjectSelect value={subjectId} onChange={setSubjectId} allowEmpty={false} required />
+      {(chapters ?? []).length > 0 ? (
+        <div>
+          <label className="label" htmlFor="qa-card-chapter">
+            Chapitre
+          </label>
+          <select
+            id="qa-card-chapter"
+            className="field"
+            value={chapterId ?? ''}
+            onChange={(event) => setChapterId(event.target.value || null)}
+          >
+            <option value="">Aucun chapitre</option>
+            {(chapters ?? []).map((chapter) => (
+              <option key={chapter.id} value={chapter.id}>
+                {chapter.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+      <Actions onDone={onDone} />
+    </form>
+  );
+}
 
 export function SheetForm({ onDone }: FormProps) {
   const router = useRouter();

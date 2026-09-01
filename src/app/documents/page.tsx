@@ -144,12 +144,13 @@ export default function DocumentsPage() {
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface2 text-muted">
                   <Icon size={17} />
                 </span>
-                <button
-                  type="button"
-                  onClick={() => open(doc)}
-                  className="min-w-0 flex-1 text-left"
-                >
-                  <span className="block truncate text-[14px] font-medium text-ink">{doc.name}</span>
+                <div className="min-w-0 flex-1">
+                  <DocumentName document={doc} />
+                  <button
+                    type="button"
+                    onClick={() => open(doc)}
+                    className="block w-full text-left"
+                  >
                   <span className="mt-0.5 flex flex-wrap items-center gap-2 text-[12px] text-muted">
                     <span>{KIND_LABEL[doc.kind]}</span>
                     {doc.kind !== 'link' ? <span>{formatBytes(doc.size)}</span> : null}
@@ -163,8 +164,9 @@ export default function DocumentsPage() {
                       {doc.localPath}
                     </span>
                   ) : null}
-                </button>
-                {desktop && doc.kind !== 'link' ? (
+                  </button>
+                </div>
+                {doc.kind !== 'link' ? (
                   <>
                     <button
                       type="button"
@@ -175,7 +177,7 @@ export default function DocumentsPage() {
                     >
                       <FolderInput size={16} />
                     </button>
-                    {doc.localPath ? (
+                    {desktop && doc.localPath ? (
                       <button
                         type="button"
                         className="btn-ghost h-9 w-9 shrink-0 rounded-xl p-0"
@@ -229,5 +231,49 @@ export default function DocumentsPage() {
         onClose={() => setFiling(null)}
       />
     </>
+  );
+}
+
+/**
+ * Nom du document, modifiable sur place.
+ *
+ * Le nom sert aussi de nom de fichier sur le disque : on ne renomme donc
+ * qu'une fois la saisie terminée, et on demande au classement de déplacer
+ * le fichier existant vers son nouveau nom.
+ */
+function DocumentName({ document }: { document: DocumentItem }) {
+  const [name, setName] = useState(document.name);
+  const [editingId, setEditingId] = useState(document.id);
+
+  if (editingId !== document.id) {
+    setEditingId(document.id);
+    setName(document.name);
+  }
+
+  const commit = async () => {
+    const next = name.trim();
+    if (!next || next === document.name) {
+      setName(document.name);
+      return;
+    }
+    await db.documents.update(document.id, { name: next });
+    await refileDocument(document.id);
+  };
+
+  return (
+    <input
+      className="w-full truncate bg-transparent text-[14px] font-medium text-ink outline-none"
+      value={name}
+      aria-label={`Nom du document : ${document.name}`}
+      onChange={(event) => setName(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur();
+        if (event.key === 'Escape') {
+          setName(document.name);
+          event.currentTarget.blur();
+        }
+      }}
+    />
   );
 }

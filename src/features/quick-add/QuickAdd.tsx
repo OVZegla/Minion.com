@@ -9,6 +9,7 @@ import {
   FolderOpen,
   GraduationCap,
   Layers,
+  Layers2,
   ListTodo,
   Scale,
   StickyNote,
@@ -22,6 +23,7 @@ import {
   EventForm,
   ExamForm,
   InboxForm,
+  FlashcardForm,
   RevisionForm,
   SheetForm,
   SubjectForm,
@@ -38,6 +40,7 @@ type Kind =
   | 'sheet'
   | 'revision'
   | 'caselaw'
+  | 'flashcard'
   | 'subject';
 
 const OPTIONS: { kind: Kind; label: string; icon: typeof ListTodo; hint: string }[] = [
@@ -48,6 +51,7 @@ const OPTIONS: { kind: Kind; label: string; icon: typeof ListTodo; hint: string 
   { kind: 'course', label: 'Cours', icon: BookOpen, hint: 'Une séance de cours' },
   { kind: 'sheet', label: 'Fiche', icon: FileText, hint: 'Fiche de révision' },
   { kind: 'revision', label: 'Révision', icon: CircleCheckBig, hint: 'Session planifiée' },
+  { kind: 'flashcard', label: 'Flashcard', icon: Layers2, hint: 'Une question, une réponse' },
   { kind: 'document', label: 'Document', icon: FolderOpen, hint: 'Fichier ou lien' },
   { kind: 'caselaw', label: 'Jurisprudence', icon: Scale, hint: 'Décision à retenir' },
   { kind: 'subject', label: 'Matière', icon: Layers, hint: 'Nouvelle matière' },
@@ -63,6 +67,7 @@ const TITLES: Record<Kind, string> = {
   sheet: 'Nouvelle fiche',
   revision: 'Session de révision',
   caselaw: 'Nouvelle décision',
+  flashcard: 'Nouvelle flashcard',
   subject: 'Nouvelle matière',
 };
 
@@ -123,6 +128,7 @@ export function QuickAdd() {
           {kind === 'document' ? <DocumentForm onDone={onDone} /> : null}
           {kind === 'sheet' ? <SheetForm onDone={onDone} /> : null}
           {kind === 'revision' ? <RevisionForm onDone={onDone} /> : null}
+          {kind === 'flashcard' ? <FlashcardForm onDone={onDone} /> : null}
           {kind === 'caselaw' ? <CaseLawForm onDone={onDone} /> : null}
           {kind === 'subject' ? <SubjectForm onDone={onDone} /> : null}
         </div>

@@ -10,7 +10,8 @@ import { TEMPLATES, type TemplateField } from '@/features/legal-tools/templates'
 import { EmptyState } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { SaveIndicatorLabel, useAutosave } from '@/hooks/useAutosave';
+import { useAutosave } from '@/hooks/useAutosave';
+import { SaveButton } from '@/components/ui/SaveButton';
 import { newId } from '@/lib/id';
 import { nowISO } from '@/lib/dates';
 
@@ -36,7 +37,7 @@ export default function MethodDocPage({ params }: { params: Promise<{ id: string
   }, [doc, ready]);
 
   const payload = useMemo(() => ({ title, fields, repeatable }), [title, fields, repeatable]);
-  const saveState = useAutosave(
+  const autosave = useAutosave(
     payload,
     async (value) => {
       await db.methodDocs.update(id, {
@@ -64,7 +65,6 @@ export default function MethodDocPage({ params }: { params: Promise<{ id: string
   }
 
   const template = TEMPLATES[doc.template];
-  const saveLabel = SaveIndicatorLabel(saveState);
 
   const renderField = (
     field: TemplateField,
@@ -104,7 +104,7 @@ export default function MethodDocPage({ params }: { params: Promise<{ id: string
           Méthodes
         </Link>
         <div className="flex items-center gap-1">
-          {saveLabel ? <span className="mr-1 text-[12px] text-muted">{saveLabel}</span> : null}
+          <SaveButton autosave={autosave} />
           <button
             type="button"
             className="btn-ghost h-9 w-9 rounded-xl p-0"

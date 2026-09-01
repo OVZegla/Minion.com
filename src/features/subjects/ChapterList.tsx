@@ -11,7 +11,10 @@ import { ConfirmDialog } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import type { Chapter } from '@/types';
 
-/** Liste des chapitres : l'etat de maitrise se change en un clic. */
+/**
+ * Liste des chapitres : le titre se corrige sur place et l'etat de maitrise
+ * se change en un clic.
+ */
 export function ChapterList({ subjectId, chapters }: { subjectId: string; chapters: Chapter[] }) {
   const { toast, toastUndo } = useToast();
   const [adding, setAdding] = useState(false);
@@ -42,9 +45,17 @@ export function ChapterList({ subjectId, chapters }: { subjectId: string; chapte
               >
                 {index + 1}
               </span>
-              <p className="min-w-0 flex-1 truncate text-[14px] font-medium text-ink">
-                {chapter.title}
-              </p>
+              <input
+                className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-ink outline-none"
+                value={chapter.title}
+                aria-label={`Titre du chapitre ${index + 1}`}
+                onChange={async (event) => {
+                  await db.chapters.update(chapter.id, {
+                    title: event.target.value,
+                    updatedAt: nowISO(),
+                  });
+                }}
+              />
               <MasteryPill level={chapter.mastery} onClick={() => void cycle(chapter)} />
               <button
                 type="button"

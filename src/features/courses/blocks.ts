@@ -1,4 +1,5 @@
 import { newId } from '@/lib/id';
+import { richToPlain } from '@/lib/richtext';
 import type { CourseBlock } from '@/types';
 
 export const BLOCK_LABELS: Record<CourseBlock['type'], string> = {
@@ -77,29 +78,33 @@ export function createBlock(
   }
 }
 
-/** Texte brut d'un bloc — sert a la recherche et aux resumes. */
+/**
+ * Texte brut d'un bloc — sert a la recherche, aux resumes et aux compteurs.
+ * La mise en forme (gras, couleur, taille) est retiree.
+ */
 export function blockToText(block: CourseBlock): string {
+  const plain = richToPlain;
   switch (block.type) {
     case 'heading':
     case 'paragraph':
-      return block.text;
+      return plain(block.text);
     case 'quote':
-      return `${block.text} ${block.source ?? ''}`;
+      return `${plain(block.text)} ${block.source ?? ''}`;
     case 'bullets':
     case 'numbered':
-      return block.items.join(' ');
+      return block.items.map(plain).join(' ');
     case 'checklist':
-      return block.items.map((item) => item.text).join(' ');
+      return block.items.map((item) => plain(item.text)).join(' ');
     case 'link':
       return `${block.label ?? ''} ${block.url}`;
     case 'table':
       return [...block.header, ...block.rows.flat()].join(' ');
     case 'callout':
-      return `${block.title ?? ''} ${block.text}`;
+      return `${block.title ?? ''} ${plain(block.text)}`;
     case 'article':
-      return `${block.code} ${block.reference} ${block.text} ${block.comment ?? ''}`;
+      return `${block.code} ${block.reference} ${plain(block.text)} ${plain(block.comment ?? '')}`;
     case 'caselaw':
-      return `${block.court} ${block.chamber ?? ''} ${block.principle ?? ''} ${block.scope ?? ''}`;
+      return `${block.court} ${block.chamber ?? ''} ${plain(block.principle ?? '')} ${plain(block.scope ?? '')}`;
     default:
       return '';
   }

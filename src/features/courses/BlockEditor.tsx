@@ -4,48 +4,8 @@ import clsx from 'clsx';
 import { ChevronDown, ChevronUp, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { BLOCK_MENU, CALLOUT_LABELS, createBlock } from './blocks';
+import { RichText, RichToolbar } from './RichText';
 import type { CourseBlock } from '@/types';
-
-/** Zone de texte qui grandit avec le contenu. */
-function AutoTextarea({
-  value,
-  onChange,
-  placeholder,
-  className,
-  rows = 1,
-  ariaLabel,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  className?: string;
-  rows?: number;
-  ariaLabel: string;
-}) {
-  return (
-    <textarea
-      aria-label={ariaLabel}
-      rows={rows}
-      value={value}
-      placeholder={placeholder}
-      onChange={(event) => {
-        onChange(event.target.value);
-        event.target.style.height = 'auto';
-        event.target.style.height = `${event.target.scrollHeight}px`;
-      }}
-      ref={(node) => {
-        if (node) {
-          node.style.height = 'auto';
-          node.style.height = `${node.scrollHeight}px`;
-        }
-      }}
-      className={clsx(
-        'w-full resize-none bg-transparent text-ink outline-none placeholder:text-muted/60',
-        className,
-      )}
-    />
-  );
-}
 
 const CALLOUT_STYLE: Record<string, string> = {
   remember: 'border-primary-line bg-primary-soft',
@@ -78,6 +38,7 @@ export function BlockEditor({
 
   return (
     <div className="space-y-2">
+      <RichToolbar className="mb-1" />
       {blocks.map((block, index) => (
         <div key={block.id} className="group relative rounded-2xl px-1 py-0.5 hover:bg-surface2/40">
           <div className="absolute -left-1 top-1 z-10 hidden -translate-x-full gap-0.5 pr-1 group-hover:flex group-focus-within:flex lg:flex-col">
@@ -178,7 +139,7 @@ function BlockBody({
             <option value={2}>H2</option>
             <option value={3}>H3</option>
           </select>
-          <AutoTextarea
+          <RichText
             ariaLabel="Titre"
             value={block.text}
             onChange={(text) => update(block.id, { text })}
@@ -193,7 +154,7 @@ function BlockBody({
 
     case 'paragraph':
       return (
-        <AutoTextarea
+        <RichText
           ariaLabel="Texte"
           value={block.text}
           onChange={(text) => update(block.id, { text })}
@@ -211,7 +172,7 @@ function BlockBody({
               <span className="mt-[6px] shrink-0 text-[13px] text-muted">
                 {block.type === 'bullets' ? '•' : `${index + 1}.`}
               </span>
-              <AutoTextarea
+              <RichText
                 ariaLabel={`Élément ${index + 1}`}
                 value={item}
                 onChange={(value) => {
@@ -263,7 +224,7 @@ function BlockBody({
                   update(block.id, { items });
                 }}
               />
-              <AutoTextarea
+              <RichText
                 ariaLabel={`Case ${index + 1}`}
                 value={item.text}
                 onChange={(text) => {
@@ -302,7 +263,7 @@ function BlockBody({
     case 'quote':
       return (
         <blockquote className="border-l-[3px] border-line pl-3">
-          <AutoTextarea
+          <RichText
             ariaLabel="Citation"
             value={block.text}
             onChange={(text) => update(block.id, { text })}
@@ -428,7 +389,7 @@ function BlockBody({
               onChange={(event) => update(block.id, { title: event.target.value })}
             />
           </div>
-          <AutoTextarea
+          <RichText
             ariaLabel="Contenu de l’encadré"
             value={block.text}
             onChange={(text) => update(block.id, { text })}
@@ -458,14 +419,14 @@ function BlockBody({
               onChange={(event) => update(block.id, { reference: event.target.value })}
             />
           </div>
-          <AutoTextarea
+          <RichText
             ariaLabel="Texte de l’article"
             value={block.text}
             onChange={(text) => update(block.id, { text })}
             placeholder="Texte de l’article (recopie ta source officielle)"
             className="mt-2 text-[14px] italic leading-relaxed"
           />
-          <AutoTextarea
+          <RichText
             ariaLabel="Commentaire personnel"
             value={block.comment ?? ''}
             onChange={(comment) => update(block.id, { comment })}
@@ -509,14 +470,14 @@ function BlockBody({
               onChange={(event) => update(block.id, { number: event.target.value })}
             />
           </div>
-          <AutoTextarea
+          <RichText
             ariaLabel="Principe"
             value={block.principle ?? ''}
             onChange={(principle) => update(block.id, { principle })}
             placeholder="Principe"
             className="mt-2 text-[14px] leading-relaxed"
           />
-          <AutoTextarea
+          <RichText
             ariaLabel="Portée"
             value={block.scope ?? ''}
             onChange={(scope) => update(block.id, { scope })}

@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Star, Trash2 } from 'lucide-react';
 import { db } from '@/db/db';
 import { deleteCourseCascade } from '@/db/repo';
-import { useChapters, useCourse, useSubject } from '@/hooks/data';
+import { useChapters, useCourse, useSubject, useSubjects } from '@/hooks/data';
 import { BlockEditor } from '@/features/courses/BlockEditor';
 import { blockToText } from '@/features/courses/blocks';
 import { EmptyState, MasteryPill, SubjectBadge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { SaveIndicatorLabel, useAutosave } from '@/hooks/useAutosave';
+import { useAutosave } from '@/hooks/useAutosave';
+import { SaveButton } from '@/components/ui/SaveButton';
 import { nextMastery } from '@/lib/progress';
 import { nowISO } from '@/lib/dates';
 import type { CourseBlock, CourseKind } from '@/types';
@@ -24,6 +25,7 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
   const course = useCourse(id);
   const subject = useSubject(course?.subjectId);
   const chapters = useChapters(course?.subjectId);
+  const subjects = useSubjects();
 
   const [title, setTitle] = useState('');
   const [blocks, setBlocks] = useState<CourseBlock[]>([]);
@@ -41,7 +43,7 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
 
   const payload = useMemo(() => ({ title, blocks, keywords }), [title, blocks, keywords]);
 
-  const saveState = useAutosave(
+  const autosave = useAutosave(
     payload,
     async (value) => {
       await db.courses.update(id, {
@@ -73,7 +75,6 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
     );
   }
 
-  const saveLabel = SaveIndicatorLabel(saveState);
 
   return (
     <>
@@ -83,7 +84,7 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
           {subject ? subject.name : 'Mes cours'}
         </Link>
         <div className="flex items-center gap-2">
-          {saveLabel ? <span className="text-[12px] text-muted">{saveLabel}</span> : null}
+          <SaveButton autosave={autosave} />
           <button
             type="button"
             onClick={async () => {
@@ -111,7 +112,42 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
           {subject ? (
             <SubjectBadge name={subject.name} color={subject.color} href={`/matieres/${subject.id}`} />
           ) : null}
-          <span className="chip text-muted">Cours {String(course.number).padStart(2, '0')}</span>
+          <select
+            className="chip cursor-pointer bg-surface text-muted"
+            value={course.subjectId ?? ''}
+            aria-label="Matière du cours"
+            onChange={async (event) => {
+              // Changer de matière détache le chapitre : il appartenait à
+              // l'ancienne matière.
+              if (!event.target.value) return;
+              await db.courses.update(id, {
+                subjectId: event.target.value,
+                chapterId: null,
+                updatedAt: nowISO(),
+              });
+            }}
+          >
+            {(subjects ?? []).map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.name}
+              </option>
+            ))}
+          </select>
+          <label className="chip gap-1 bg-surface text-muted">
+            Cours n°
+            <input
+              type="number"
+              min={1}
+              className="w-12 bg-transparent text-ink outline-none"
+              value={course.number}
+              aria-label="Numéro du cours"
+              onChange={async (event) => {
+                const next = Number(event.target.value);
+                if (!Number.isFinite(next) || next < 1) return;
+                await db.courses.update(id, { number: next, updatedAt: nowISO() });
+              }}
+            />
+          </label>
           <select
             className="chip cursor-pointer bg-surface text-muted"
             value={course.kind}
@@ -160,11 +196,11 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
           aria-label="Titre du cours"
         />
 
-        {(chapters ?? []).length > 0 ? (
-          <div className="mt-3">
-            <label className="label" htmlFor="course-chapter">
-              Chapitre
-            </label>
+        <div className="mt-3">
+          <label className="label" htmlFor="course-chapter">
+            Chapitre
+          </label>
+          {(chapters ?? []).length > 0 ? (
             <select
               id="course-chapter"
               className="field max-w-sm"
@@ -183,8 +219,21 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
                 </option>
               ))}
             </select>
-          </div>
-        ) : null}
+          ) : (
+            <p className="text-[13px] text-muted">
+              {subject ? (
+                <>
+                  Cette matière n’a pas encore de chapitre.{' '}
+                  <Link href={`/matieres/${subject.id}`} className="text-accent underline">
+                    En ajouter dans {subject.name}
+                  </Link>
+                </>
+              ) : (
+                'Choisis d’abord une matière pour rattacher ce cours à un chapitre.'
+              )}
+            </p>
+          )}
+        </div>
       </header>
 
       <div className="lg:pl-8">
@@ -192,6 +241,36 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
       </div>
 
       <div className="mt-8 border-t border-line pt-5">
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 sm:max-w-lg">
+          <div>
+            <label className="label" htmlFor="course-teacher">
+              Enseignant
+            </label>
+            <input
+              id="course-teacher"
+              className="field"
+              value={course.teacher ?? ''}
+              placeholder="Nom de l’enseignant"
+              onChange={async (event) => {
+                await db.courses.update(id, { teacher: event.target.value, updatedAt: nowISO() });
+              }}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="course-room">
+              Salle
+            </label>
+            <input
+              id="course-room"
+              className="field"
+              value={course.room ?? ''}
+              placeholder="Amphi B, salle 204…"
+              onChange={async (event) => {
+                await db.courses.update(id, { room: event.target.value, updatedAt: nowISO() });
+              }}
+            />
+          </div>
+        </div>
         <label className="label" htmlFor="course-keywords">
           Mots-clés
         </label>

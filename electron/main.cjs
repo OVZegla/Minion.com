@@ -82,7 +82,10 @@ function findFreePort() {
 function probe(port, timeoutMs = 4000) {
   return new Promise((resolve) => {
     const request = http.get(
-      { host: '127.0.0.1', port, path: '/', timeout: timeoutMs },
+      // agent: false — sans cela l'agent global garde la connexion ouverte
+      // (keepAlive par défaut depuis Node 19) et l'arrêt du serveur attend
+      // indéfiniment sa fermeture.
+      { host: '127.0.0.1', port, path: '/', timeout: timeoutMs, agent: false },
       (response) => {
         response.resume();
         resolve(response.statusCode ?? 0);
@@ -221,6 +224,34 @@ async function startServer() {
 
   await waitForServer(serverPort);
   return serverPort;
+}
+
+/**
+ * Arrête le moteur interne.
+ * SIGTERM d'abord, puis arrêt forcé : rien ne doit pouvoir empêcher
+ * l'application de se fermer.
+ */
+function stopServer() {
+  const child = serverProcess;
+  if (!child) return;
+  serverProcess = null;
+  child.removeAllListeners('exit');
+
+  try {
+    child.kill();
+  } catch {
+    /* le processus était déjà terminé */
+  }
+
+  const forceKill = setTimeout(() => {
+    try {
+      child.kill('SIGKILL');
+    } catch {
+      /* idem */
+    }
+  }, 1500);
+  forceKill.unref?.();
+  child.once('exit', () => clearTimeout(forceKill));
 }
 
 /** Page d'erreur lisible, plutôt que le « Internal Server Error » brut de Next. */
@@ -465,7 +496,11 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('before-quit', () => {
     app.isQuitting = true;
-    stopServer();
+    try {
+      stopServer();
+    } catch (error) {
+      appendLog(`[arret] ${String(error?.message ?? error)}`);
+    }
   });
 
   app.on('window-all-closed', () => {

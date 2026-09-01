@@ -1,20 +1,11 @@
 'use client';
 
 import clsx from 'clsx';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Bold, Highlighter, Italic, RemoveFormatting, Strikethrough, Underline } from 'lucide-react';
-import {
-  RICH_COLORS,
-  RICH_FONTS,
-  RICH_MARKS,
-  RICH_SIZES,
-  isRichEmpty,
-  sanitizeRich,
-} from '@/lib/richtext';
+import { useCallback, useEffect, useRef } from 'react';
+import { isRichEmpty, sanitizeRich } from '@/lib/richtext';
 
 /**
- * Champ de saisie avec mise en forme (gras, italique, souligné, barré,
- * couleur, surlignage, taille, police).
+ * Champ de saisie avec mise en forme.
  *
  * Deux principes :
  *
@@ -24,7 +15,7 @@ import {
  * 2. La hauteur est laissée au navigateur. L'ancienne zone de texte remettait
  *    sa hauteur à zéro avant de la recalculer, à chaque rendu et pour tous les
  *    champs de la page : la page se raccourcissait brutalement et le navigateur
- *    ramenait la vue vers le haut. C'était le bug de « l'écran qui remonte ».
+ *    déplaçait la vue. C'était le bug de « l'écran qui remonte ».
  */
 
 interface ActiveField {
@@ -32,31 +23,229 @@ interface ActiveField {
   emit: () => void;
 }
 
+/** Mise en forme actuellement sous le curseur, pour allumer les boutons. */
+export interface ActiveMarks {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strike: boolean;
+  color: string | null;
+  mark: string | null;
+  size: string | null;
+  font: string | null;
+}
+
+const NO_MARKS: ActiveMarks = {
+  bold: false,
+  italic: false,
+  underline: false,
+  strike: false,
+  color: null,
+  mark: null,
+  size: null,
+  font: null,
+};
+
 let activeField: ActiveField | null = null;
+let activeMarks: ActiveMarks = NO_MARKS;
+/**
+ * Dernière sélection connue dans le champ actif.
+ *
+ * Cliquer une liste déroulante de la barre déplace le focus hors du champ et
+ * peut effacer la sélection : on la remet en place avant d'appliquer.
+ */
+let savedRange: Range | null = null;
 const listeners = new Set<() => void>();
+
+const notify = () => {
+  for (const listener of listeners) listener();
+};
+
+/** Magasin lu par la barre de mise en forme : null quand aucun champ n'est actif. */
+export const richMarksStore = {
+  subscribe(listener: () => void) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  },
+  get(): ActiveMarks | null {
+    return activeField ? activeMarks : null;
+  },
+};
+
+/** Mémorise la sélection courante si elle est dans le champ actif. */
+function rememberSelection(): void {
+  const field = activeField;
+  if (!field || typeof window === 'undefined') return;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const range = selection.getRangeAt(0);
+  if (field.el.contains(range.commonAncestorContainer)) savedRange = range.cloneRange();
+}
+
+/** Redonne le focus au champ et rétablit la sélection mémorisée si besoin. */
+function focusField(field: ActiveField): Selection | null {
+  field.el.focus();
+  const selection = window.getSelection();
+  if (!selection) return null;
+  const inside =
+    selection.rangeCount > 0 && field.el.contains(selection.getRangeAt(0).commonAncestorContainer);
+  if (!inside && savedRange) {
+    selection.removeAllRanges();
+    selection.addRange(savedRange);
+  }
+  return selection;
+}
+
+/** Lit la mise en forme sous le curseur en remontant les parents du champ. */
+function readActiveMarks(): ActiveMarks {
+  const field = activeField;
+  if (!field || typeof window === 'undefined') return NO_MARKS;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return NO_MARKS;
+
+  const state = (command: string) => {
+    try {
+      return document.queryCommandState(command);
+    } catch {
+      return false;
+    }
+  };
+
+  const marks: ActiveMarks = {
+    bold: state('bold'),
+    italic: state('italic'),
+    underline: state('underline'),
+    strike: state('strikeThrough'),
+    color: null,
+    mark: null,
+    size: null,
+    font: null,
+  };
+
+  let node: Node | null = selection.anchorNode;
+  while (node && node !== field.el) {
+    if (node.nodeType === 1) {
+      for (const name of (node as HTMLElement).classList) {
+        if (marks.color === null && name.startsWith('rt-c-')) marks.color = name.slice(5);
+        else if (marks.mark === null && name.startsWith('rt-m-')) marks.mark = name.slice(5);
+        else if (marks.size === null && name.startsWith('rt-pt-')) marks.size = name.slice(6);
+        else if (marks.font === null && name.startsWith('rt-f-')) marks.font = name.slice(5);
+      }
+    }
+    node = node.parentNode;
+  }
+  return marks;
+}
+
+function refreshMarks() {
+  const next = readActiveMarks();
+  const previous = activeMarks;
+  if (
+    next.bold === previous.bold &&
+    next.italic === previous.italic &&
+    next.underline === previous.underline &&
+    next.strike === previous.strike &&
+    next.color === previous.color &&
+    next.mark === previous.mark &&
+    next.size === previous.size &&
+    next.font === previous.font
+  ) {
+    return;
+  }
+  activeMarks = next;
+  notify();
+}
 
 function setActiveField(next: ActiveField | null) {
   activeField = next;
-  for (const listener of listeners) listener();
+  activeMarks = next ? readActiveMarks() : NO_MARKS;
+  notify();
 }
 
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-/** Applique une commande de mise en forme au champ en cours d'édition. */
-export function richCommand(command: string, value?: string, useCss = false): void {
+/** Commande simple du navigateur : gras, italique, souligné, barré. */
+export function toggleRichCommand(command: string): void {
   const field = activeField;
   if (!field) return;
-  field.el.focus();
+  focusField(field);
   try {
-    document.execCommand('styleWithCSS', false, String(useCss));
-    document.execCommand(command, false, value);
+    document.execCommand('styleWithCSS', false, 'false');
+    document.execCommand(command, false);
   } catch {
     return;
   }
   field.emit();
+  refreshMarks();
+}
+
+/**
+ * Applique une classe de mise en forme à la sélection.
+ *
+ * `execCommand` ne sait pas poser une taille en points ni une classe. On lui
+ * fait donc marquer la sélection avec une taille factice — lui seul sait
+ * découper proprement une sélection à cheval sur plusieurs éléments — puis on
+ * remplace ces marqueurs par nos propres balises.
+ */
+export function applyRichClass(prefix: 'rt-c-' | 'rt-m-' | 'rt-pt-' | 'rt-f-', key: string): void {
+  const field = activeField;
+  if (!field) return;
+  const selection = focusField(field);
+  if (!selection || selection.rangeCount === 0) return;
+
+  try {
+    document.execCommand('styleWithCSS', false, 'false');
+    document.execCommand('fontSize', false, '7');
+  } catch {
+    return;
+  }
+
+  const created: HTMLElement[] = [];
+  for (const marker of Array.from(field.el.querySelectorAll('font[size="7"]'))) {
+    const span = document.createElement('span');
+    span.className = `${prefix}${key}`;
+    while (marker.firstChild) span.appendChild(marker.firstChild);
+    marker.replaceWith(span);
+    created.push(span);
+  }
+
+  if (created.length > 0) {
+    // La sélection est replacée À L'INTÉRIEUR des balises créées : sans cela la
+    // barre ne verrait pas la mise en forme qu'elle vient d'appliquer.
+    const last = created[created.length - 1];
+    const range = document.createRange();
+    range.setStart(created[0], 0);
+    range.setEnd(last, last.childNodes.length);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    savedRange = range.cloneRange();
+  }
+
+  field.emit();
+  refreshMarks();
+}
+
+export function clearRichFormatting(): void {
+  const field = activeField;
+  if (!field) return;
+  focusField(field);
+  try {
+    document.execCommand('removeFormat', false);
+  } catch {
+    return;
+  }
+  // removeFormat ne connaît pas nos classes : on dépouille la sélection.
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    for (const span of Array.from(field.el.querySelectorAll('span'))) {
+      if (!range.intersectsNode(span)) continue;
+      if (![...span.classList].some((name) => name.startsWith('rt-'))) continue;
+      span.replaceWith(...Array.from(span.childNodes));
+    }
+  }
+  field.emit();
+  refreshMarks();
 }
 
 export function RichText({
@@ -77,19 +266,20 @@ export function RichText({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  const emit = () => {
+  const emit = useCallback(() => {
     const el = ref.current;
     if (!el) return;
     const clean = sanitizeRich(el.innerHTML);
     if (clean === lastHtml.current) return;
     lastHtml.current = clean;
     onChangeRef.current(clean);
-  };
+  }, []);
 
-  // Réécriture uniquement sur changement venu de l'extérieur.
+  // Réécriture uniquement sur changement venu de l'extérieur, et jamais
+  // pendant que le champ a le focus : cela détruirait le curseur.
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || document.activeElement === el) return;
     const clean = sanitizeRich(value);
     if (clean !== lastHtml.current) {
       el.innerHTML = clean;
@@ -125,8 +315,19 @@ export function RichText({
         suppressContentEditableWarning
         spellCheck
         onInput={emit}
-        onBlur={emit}
+        onBlur={() => {
+          rememberSelection();
+          emit();
+        }}
         onFocus={() => setActiveField({ el: ref.current as HTMLElement, emit })}
+        onKeyUp={() => {
+          rememberSelection();
+          refreshMarks();
+        }}
+        onMouseUp={() => {
+          rememberSelection();
+          refreshMarks();
+        }}
         // Un collage n'apporte jamais de balises : uniquement du texte.
         onPaste={(event) => {
           event.preventDefault();
@@ -139,162 +340,6 @@ export function RichText({
           className,
         )}
       />
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Barre de mise en forme                                              */
-/* ------------------------------------------------------------------ */
-
-function ToolButton({
-  label,
-  onApply,
-  children,
-  disabled,
-}: {
-  label: string;
-  onApply: () => void;
-  children: React.ReactNode;
-  disabled: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      disabled={disabled}
-      // On empêche la perte de sélection : sans cela le clic viderait la
-      // sélection avant que la commande ne s'applique.
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onApply}
-      className="btn-ghost h-8 w-8 rounded-lg p-0 disabled:opacity-40"
-    >
-      {children}
-    </button>
-  );
-}
-
-function ToolSelect({
-  label,
-  options,
-  onPick,
-  disabled,
-}: {
-  label: string;
-  options: { key: string; label: string }[];
-  onPick: (key: string) => void;
-  disabled: boolean;
-}) {
-  return (
-    <select
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      value=""
-      onMouseDown={(event) => event.stopPropagation()}
-      onChange={(event) => {
-        const key = event.target.value;
-        event.target.value = '';
-        if (key) onPick(key);
-      }}
-      className="h-8 rounded-lg border border-line bg-surface px-1.5 text-[12px] text-ink disabled:opacity-40"
-    >
-      <option value="">{label}</option>
-      {options.map((option) => (
-        <option key={option.key} value={option.key}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-/**
- * Barre collante affichée au-dessus de l'éditeur. Elle agit sur le champ qui a
- * le focus ; sans champ actif, elle est grisée et explique quoi faire.
- */
-export function RichToolbar({ className }: { className?: string }) {
-  const active = useSyncExternalStore(
-    subscribe,
-    () => activeField !== null,
-    () => false,
-  );
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const disabled = !mounted || !active;
-
-  return (
-    <div
-      className={clsx(
-        'sticky top-2 z-20 flex flex-wrap items-center gap-1 rounded-2xl border border-line bg-surface/95 px-2 py-1.5 backdrop-blur',
-        className,
-      )}
-    >
-      <ToolButton label="Gras" disabled={disabled} onApply={() => richCommand('bold')}>
-        <Bold size={15} />
-      </ToolButton>
-      <ToolButton label="Italique" disabled={disabled} onApply={() => richCommand('italic')}>
-        <Italic size={15} />
-      </ToolButton>
-      <ToolButton label="Souligné" disabled={disabled} onApply={() => richCommand('underline')}>
-        <Underline size={15} />
-      </ToolButton>
-      <ToolButton label="Barré" disabled={disabled} onApply={() => richCommand('strikeThrough')}>
-        <Strikethrough size={15} />
-      </ToolButton>
-
-      <span className="mx-0.5 h-5 w-px bg-line" />
-
-      <ToolSelect
-        label="Couleur"
-        disabled={disabled}
-        options={[{ key: 'aucune', label: 'Couleur du texte' }, ...RICH_COLORS]}
-        onPick={(key) => {
-          const color = RICH_COLORS.find((entry) => entry.key === key);
-          richCommand('foreColor', color ? color.value : 'currentColor', true);
-        }}
-      />
-      <ToolSelect
-        label="Surligner"
-        disabled={disabled}
-        options={[{ key: 'aucun', label: 'Aucun surlignage' }, ...RICH_MARKS]}
-        onPick={(key) => {
-          const mark = RICH_MARKS.find((entry) => entry.key === key);
-          richCommand('hiliteColor', mark ? mark.value : 'transparent', true);
-        }}
-      />
-      <ToolSelect
-        label="Taille"
-        disabled={disabled}
-        options={RICH_SIZES}
-        onPick={(key) => {
-          const size = RICH_SIZES.find((entry) => entry.key === key);
-          if (size) richCommand('fontSize', size.value);
-        }}
-      />
-      <ToolSelect
-        label="Police"
-        disabled={disabled}
-        options={RICH_FONTS}
-        onPick={(key) => {
-          const font = RICH_FONTS.find((entry) => entry.key === key);
-          if (font) richCommand('fontName', font.value);
-        }}
-      />
-
-      <ToolButton
-        label="Enlever la mise en forme"
-        disabled={disabled}
-        onApply={() => richCommand('removeFormat')}
-      >
-        <RemoveFormatting size={15} />
-      </ToolButton>
-
-      <span className="ml-auto hidden items-center gap-1 pr-1 text-[11px] text-muted sm:flex">
-        <Highlighter size={12} />
-        {disabled ? 'Clique dans un texte pour le mettre en forme' : 'Sélectionne du texte'}
-      </span>
     </div>
   );
 }

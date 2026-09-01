@@ -4,7 +4,8 @@ import clsx from 'clsx';
 import { ChevronDown, ChevronUp, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { BLOCK_MENU, CALLOUT_LABELS, createBlock } from './blocks';
-import { RichText, RichToolbar } from './RichText';
+import { RichText } from './RichText';
+import { RichToolbar } from './RichToolbar';
 import type { CourseBlock } from '@/types';
 
 const CALLOUT_STYLE: Record<string, string> = {
@@ -38,10 +39,10 @@ export function BlockEditor({
 
   return (
     <div className="space-y-2">
-      <RichToolbar className="mb-1" />
+      <RichToolbar className="no-print mb-1" />
       {blocks.map((block, index) => (
         <div key={block.id} className="group relative rounded-2xl px-1 py-0.5 hover:bg-surface2/40">
-          <div className="absolute -left-1 top-1 z-10 hidden -translate-x-full gap-0.5 pr-1 group-hover:flex group-focus-within:flex lg:flex-col">
+          <div className="no-print absolute -left-1 top-1 z-10 hidden -translate-x-full gap-0.5 pr-1 group-hover:flex group-focus-within:flex lg:flex-col">
             <button
               type="button"
               onClick={() => move(index, -1)}
@@ -72,7 +73,7 @@ export function BlockEditor({
             <BlockBody block={block} update={update} />
           </div>
 
-          <div className="flex justify-end gap-0.5 lg:hidden">
+          <div className="no-print flex justify-end gap-0.5 lg:hidden">
             <button type="button" onClick={() => move(index, -1)} className="btn-ghost h-7 px-2 text-[11px]">
               ↑
             </button>
@@ -86,7 +87,7 @@ export function BlockEditor({
         </div>
       ))}
 
-      <div className="relative">
+      <div className="no-print relative">
         <button
           type="button"
           className="btn-soft w-full justify-center"
@@ -97,18 +98,25 @@ export function BlockEditor({
           {menuOpen ? 'Fermer' : 'Ajouter un bloc'}
         </button>
         {menuOpen ? (
-          <div className="mt-2 grid grid-cols-2 gap-1.5 rounded-2xl border border-line bg-surface p-2 sm:grid-cols-3">
+          <div className="mt-2 grid grid-cols-2 gap-2 rounded-2xl border border-line bg-surface p-2.5 sm:grid-cols-3 lg:grid-cols-4">
             {BLOCK_MENU.map((entry) => (
               <button
                 key={`${entry.type}-${entry.variant ?? ''}`}
                 type="button"
+                aria-label={entry.label}
                 onClick={() => {
                   onChange([...blocks, createBlock(entry.type, entry.variant)]);
                   setMenuOpen(false);
                 }}
-                className="rounded-xl px-3 py-2 text-left text-[13px] text-ink transition hover:bg-primary-soft hover:text-accent"
+                className="flex min-h-[86px] flex-col items-start gap-1 rounded-2xl border border-line bg-surface p-3 text-left transition hover:border-[color:var(--primary-line)] hover:bg-primary-soft"
               >
-                {entry.label}
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-soft text-accent">
+                  <entry.icon size={17} />
+                </span>
+                <span className="text-[13px] font-semibold leading-tight text-ink">
+                  {entry.label}
+                </span>
+                <span className="text-[11px] leading-tight text-muted">{entry.hint}</span>
               </button>
             ))}
           </div>

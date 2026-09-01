@@ -32,10 +32,29 @@ interface LibraryBridge {
   openRoot(): Promise<string>;
 }
 
+interface PdfBridge {
+  (payload: { relativeDir: string; fileName: string }): Promise<{ path: string; root: string } | null>;
+}
+
 function bridge(): LibraryBridge | null {
   if (typeof window === 'undefined') return null;
   const desktop = window.minionDesktop as unknown as { library?: LibraryBridge } | undefined;
   return desktop?.library ?? null;
+}
+
+/**
+ * Enregistre la page en cours au format PDF dans les dossiers de
+ * l'utilisatrice. Renvoie null sur le web : c'est alors la boîte d'impression
+ * du navigateur qui prend le relais.
+ */
+export async function exportPdf(
+  relativeDir: string,
+  fileName: string,
+): Promise<{ path: string; root: string } | null> {
+  if (typeof window === 'undefined') return null;
+  const api = (window.minionDesktop as unknown as { exportPdf?: PdfBridge } | undefined)?.exportPdf;
+  if (!api) return null;
+  return (await api({ relativeDir, fileName })) ?? null;
 }
 
 export function isDesktop(): boolean {

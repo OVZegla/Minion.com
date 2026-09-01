@@ -73,6 +73,28 @@ function register() {
     return { path: target, root: config.root };
   });
 
+  /**
+   * Enregistre la page en cours au format PDF, dans les mêmes dossiers que
+   * les documents. La mise en page est celle de l'impression : la barre
+   * latérale et les boutons sont masqués par la feuille de style.
+   */
+  ipcMain.handle('pdf:export', async (event, payload) => {
+    const config = readConfig();
+    const { dir, file } = resolveTarget(config.root, payload?.relativeDir, payload?.fileName);
+    await fsp.mkdir(dir, { recursive: true });
+
+    const contents = event.sender;
+    const bytes = await contents.printToPDF({
+      printBackground: true,
+      pageSize: 'A4',
+      margins: { marginType: 'custom', top: 0.6, bottom: 0.6, left: 0.6, right: 0.6 },
+    });
+
+    const target = uniquePath(file, fileExists);
+    await fsp.writeFile(target, bytes);
+    return { path: target, root: config.root };
+  });
+
   ipcMain.handle('library:move', async (_event, payload) => {
     const config = readConfig();
     const from = payload?.from;

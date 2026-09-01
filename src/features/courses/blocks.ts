@@ -1,3 +1,21 @@
+import {
+  AlertTriangle,
+  BookMarked,
+  CheckSquare,
+  Heading,
+  Landmark,
+  Lightbulb,
+  Link2,
+  List,
+  ListOrdered,
+  Minus,
+  Quote,
+  Scale,
+  Sparkles,
+  Table,
+  Text,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { newId } from '@/lib/id';
 import { richToPlain } from '@/lib/richtext';
 import type { CourseBlock } from '@/types';
@@ -24,23 +42,44 @@ export const CALLOUT_LABELS = {
   warning: 'Piège à éviter',
 } as const;
 
+export interface BlockMenuEntry {
+  type: CourseBlock['type'];
+  variant?: keyof typeof CALLOUT_LABELS;
+  label: string;
+  icon: LucideIcon;
+  /** courte explication affichee sous le nom */
+  hint: string;
+}
+
 /** Blocs proposes dans le menu d'ajout, dans l'ordre. */
-export const BLOCK_MENU: { type: CourseBlock['type']; variant?: keyof typeof CALLOUT_LABELS; label: string }[] = [
-  { type: 'heading', label: 'Titre' },
-  { type: 'paragraph', label: 'Texte' },
-  { type: 'bullets', label: 'Liste à puces' },
-  { type: 'numbered', label: 'Liste numérotée' },
-  { type: 'checklist', label: 'Cases à cocher' },
-  { type: 'quote', label: 'Citation' },
-  { type: 'table', label: 'Tableau' },
-  { type: 'link', label: 'Lien' },
-  { type: 'divider', label: 'Séparateur' },
-  { type: 'callout', variant: 'remember', label: 'À retenir' },
-  { type: 'callout', variant: 'definition', label: 'Définition' },
-  { type: 'callout', variant: 'example', label: 'Exemple' },
-  { type: 'callout', variant: 'warning', label: 'Piège à éviter' },
-  { type: 'article', label: 'Article de loi' },
-  { type: 'caselaw', label: 'Jurisprudence' },
+export const BLOCK_MENU: BlockMenuEntry[] = [
+  { type: 'paragraph', label: 'Texte', icon: Text, hint: 'Un paragraphe' },
+  { type: 'heading', label: 'Titre', icon: Heading, hint: 'Découper le cours' },
+  { type: 'bullets', label: 'Liste à puces', icon: List, hint: 'Énumération' },
+  { type: 'numbered', label: 'Liste numérotée', icon: ListOrdered, hint: 'Étapes ordonnées' },
+  { type: 'checklist', label: 'Cases à cocher', icon: CheckSquare, hint: 'À faire, à vérifier' },
+  { type: 'quote', label: 'Citation', icon: Quote, hint: 'Avec sa source' },
+  { type: 'table', label: 'Tableau', icon: Table, hint: 'Comparer deux régimes' },
+  { type: 'link', label: 'Lien', icon: Link2, hint: 'Légifrance, Dalloz…' },
+  { type: 'divider', label: 'Séparateur', icon: Minus, hint: 'Aérer la page' },
+  { type: 'callout', variant: 'remember', label: 'À retenir', icon: Sparkles, hint: 'L’essentiel' },
+  {
+    type: 'callout',
+    variant: 'definition',
+    label: 'Définition',
+    icon: BookMarked,
+    hint: 'Un terme précis',
+  },
+  { type: 'callout', variant: 'example', label: 'Exemple', icon: Lightbulb, hint: 'Un cas concret' },
+  {
+    type: 'callout',
+    variant: 'warning',
+    label: 'Piège à éviter',
+    icon: AlertTriangle,
+    hint: 'Erreur classique',
+  },
+  { type: 'article', label: 'Article de loi', icon: Landmark, hint: 'Code et référence' },
+  { type: 'caselaw', label: 'Jurisprudence', icon: Scale, hint: 'Décision et portée' },
 ];
 
 export function createBlock(

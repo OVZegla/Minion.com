@@ -21,4 +21,7 @@ contextBridge.exposeInMainWorld('minionDesktop', {
     reveal: (filePath) => ipcRenderer.invoke('library:reveal', filePath),
     openRoot: () => ipcRenderer.invoke('library:openRoot'),
   },
+
+  /** Enregistre la page en cours au format PDF dans les dossiers de l'utilisatrice. */
+  exportPdf: (payload) => ipcRenderer.invoke('pdf:export', payload),
 });

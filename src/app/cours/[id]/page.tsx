@@ -14,6 +14,7 @@ import { ConfirmDialog } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { useAutosave } from '@/hooks/useAutosave';
 import { SaveButton } from '@/components/ui/SaveButton';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { nextMastery } from '@/lib/progress';
 import { nowISO } from '@/lib/dates';
 import type { CourseBlock, CourseKind } from '@/types';
@@ -78,13 +79,17 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-2">
         <Link href={subject ? `/matieres/${subject.id}` : '/cours'} className="btn-ghost -ml-2 text-[13px]">
           <ArrowLeft size={15} />
           {subject ? subject.name : 'Mes cours'}
         </Link>
         <div className="flex items-center gap-2">
           <SaveButton autosave={autosave} />
+          <ExportPdfButton
+            folder={subject ? `cours/${subject.shortName}` : 'cours'}
+            fileName={title || course.title || 'cours'}
+          />
           <button
             type="button"
             onClick={async () => {
@@ -240,7 +245,7 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
         <BlockEditor blocks={blocks} onChange={setBlocks} />
       </div>
 
-      <div className="mt-8 border-t border-line pt-5">
+      <div className="no-print mt-8 border-t border-line pt-5">
         <div className="mb-4 grid gap-3 sm:grid-cols-2 sm:max-w-lg">
           <div>
             <label className="label" htmlFor="course-teacher">

@@ -184,6 +184,34 @@ await page.evaluate(async (title) => {
 }, MARKER);
 await page.waitForTimeout(800);
 
+/* ---------- Export PDF réellement écrit sur le disque ---------- */
+
+await go(page, '/fiches');
+await page.locator('a[href^="/fiches/"]').first().click();
+await page.locator('input[aria-label="Titre de la fiche"]').waitFor({ state: 'visible', timeout: 20000 });
+await page.waitForTimeout(800);
+const boutonPdf = page.getByRole('button', { name: 'Exporter en PDF' });
+check('Le bouton d’export PDF est présent', (await boutonPdf.count()) > 0);
+await boutonPdf.first().click();
+await page.waitForTimeout(4000);
+
+const pdfs = [];
+const walkPdf = (dir) => {
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkPdf(full);
+    else if (entry.name.toLowerCase().endsWith('.pdf')) pdfs.push(full);
+  }
+};
+walkPdf(path.join(libraryRoot, 'fiches'));
+check('Un PDF a été écrit dans les dossiers', pdfs.length > 0, pdfs.join(', '));
+if (pdfs.length > 0) {
+  const head = fs.readFileSync(pdfs[0]).subarray(0, 4).toString();
+  check('Le fichier exporté est un vrai PDF', head === '%PDF', head);
+  check('Le PDF n’est pas vide', fs.statSync(pdfs[0]).size > 1000, `${fs.statSync(pdfs[0]).size} octets`);
+}
+
 /* ---------- Saisie non terminée au moment de fermer la fenêtre ---------- */
 
 const TYPED = 'Note tapee juste avant la fermeture';

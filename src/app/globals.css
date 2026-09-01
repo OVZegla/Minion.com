@@ -154,6 +154,40 @@ body {
     background: #fff;
     color: #000;
   }
+  /* Le document imprime occupe toute la page : ni barre laterale, ni marges
+     d'ecran. Les marges du papier sont reglees par la boite d'impression
+     (ou par l'export PDF de l'application de bureau). */
+  main,
+  .print-page {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  /* On evite de couper un encadre ou un tableau en deux pages. */
+  section,
+  blockquote,
+  table,
+  li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  /* Le texte mis en forme garde ses couleurs a l'impression. */
+  [class*='rt-c-'],
+  [class*='rt-m-'] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 /* Portee de couleur de matiere : bascule automatique en mode sombre.
@@ -172,12 +206,16 @@ body {
 /* Mise en forme du texte saisi dans les cours et les fiches.
    Les couleurs sont des classes et non des styles en dur, pour rester
    lisibles aussi bien en mode clair qu'en mode sombre. */
+@import url('/fonts/fonts.css');
+
 .rt-c-jaune { color: #a16207; }
 .rt-c-rouge { color: #c2261f; }
 .rt-c-vert { color: #15803d; }
 .rt-c-bleu { color: #1d4ed8; }
 .rt-c-violet { color: #7e22ce; }
 .rt-c-gris { color: #6b7280; }
+/* « Couleur automatique » : annule une couleur posee plus haut. */
+.rt-c-defaut { color: var(--text); }
 
 .dark .rt-c-jaune { color: #fbbf24; }
 .dark .rt-c-rouge { color: #f87171; }
@@ -198,15 +236,37 @@ body {
 .rt-m-vert { background-color: #bbf7d0; }
 .rt-m-bleu { background-color: #bfdbfe; }
 .rt-m-rose { background-color: #fbcfe8; }
+/* « Aucun surlignage » : annule un surlignage pose plus haut. */
+.rt-m-aucun { background-color: transparent; color: inherit; padding: 0; }
 
 .dark .rt-m-jaune { background-color: #a3801a; color: #fdf6e3; }
 .dark .rt-m-vert { background-color: #2f6b4a; color: #eafaf1; }
 .dark .rt-m-bleu { background-color: #2f5488; color: #eaf1fb; }
 .dark .rt-m-rose { background-color: #8a4468; color: #fbeaf3; }
 
-.rt-s-petit { font-size: 0.82em; }
-.rt-s-grand { font-size: 1.22em; }
-.rt-s-tres-grand { font-size: 1.5em; }
+/* Tailles en points, comme dans un traitement de texte. */
+.rt-pt-8 { font-size: 8pt; }
+.rt-pt-9 { font-size: 9pt; }
+.rt-pt-10 { font-size: 10pt; }
+.rt-pt-11 { font-size: 11pt; }
+.rt-pt-12 { font-size: 12pt; }
+.rt-pt-14 { font-size: 14pt; }
+.rt-pt-16 { font-size: 16pt; }
+.rt-pt-18 { font-size: 18pt; }
+.rt-pt-20 { font-size: 20pt; }
+.rt-pt-24 { font-size: 24pt; }
+.rt-pt-28 { font-size: 28pt; }
+.rt-pt-32 { font-size: 32pt; }
+.rt-pt-36 { font-size: 36pt; }
+.rt-pt-48 { font-size: 48pt; }
+.rt-pt-72 { font-size: 72pt; }
 
-.rt-f-serif { font-family: Georgia, 'Times New Roman', serif; }
-.rt-f-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+/* Polices. Montserrat et Roboto sont embarquees dans public/fonts. */
+.rt-f-normal { font-family: inherit; }
+.rt-f-times { font-family: 'Times New Roman', Times, 'Liberation Serif', serif; }
+.rt-f-arial { font-family: Arial, Helvetica, 'Liberation Sans', sans-serif; }
+.rt-f-calibri { font-family: Calibri, Carlito, 'Segoe UI', sans-serif; }
+.rt-f-montserrat { font-family: 'Montserrat', 'Segoe UI', sans-serif; }
+.rt-f-roboto { font-family: 'Roboto', 'Segoe UI', Arial, sans-serif; }
+.rt-f-georgia { font-family: Georgia, 'Times New Roman', serif; }
+.rt-f-mono { font-family: ui-monospace, SFMono-Regular, Consolas, Menlo, monospace; }

@@ -24,6 +24,7 @@ type Choice = 'suggested' | 'own' | 'demo';
 export function OnboardingWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { toast } = useToast();
   const [step, setStep] = useState(0);
+  const [displayName, setDisplayName] = useState('Einat');
   const [program, setProgram] = useState('BUT Carrières Juridiques');
   const [yearLabel, setYearLabel] = useState('BUT 1');
   const [track, setTrack] = useState<string>('');
@@ -39,7 +40,7 @@ export function OnboardingWizard({ open, onClose }: { open: boolean; onClose: ()
     try {
       if (choice === 'demo') {
         await seedDemoData(new Date(), { onboarded: true });
-        await updateSettings({ program, yearLabel, track: track || undefined });
+        await updateSettings({ displayName, program, yearLabel, track: track || undefined });
         toast('Données d’exemple rechargées');
         onClose();
         return;
@@ -70,6 +71,7 @@ export function OnboardingWizard({ open, onClose }: { open: boolean; onClose: ()
       });
       await db.settings.put(
         defaultSettings({
+          displayName,
           program,
           yearLabel,
           track: track || undefined,
@@ -146,7 +148,20 @@ export function OnboardingWizard({ open, onClose }: { open: boolean; onClose: ()
         </div>
 
         {step === 0 ? (
-          <div>
+          <div className="space-y-4">
+            <div>
+              <label className="label" htmlFor="ob-name">
+                Ton prénom
+              </label>
+              <input
+                id="ob-name"
+                className="field"
+                value={displayName}
+                placeholder="Affiché sur l’accueil"
+                onChange={(event) => setDisplayName(event.target.value)}
+              />
+            </div>
+            <div>
             <label className="label" htmlFor="ob-program">
               Ta formation
             </label>
@@ -157,6 +172,7 @@ export function OnboardingWizard({ open, onClose }: { open: boolean; onClose: ()
               onChange={(event) => setProgram(event.target.value)}
             />
             <p className="mt-1.5 text-xs text-muted">Tu peux mettre n’importe quelle formation.</p>
+            </div>
           </div>
         ) : null}
 

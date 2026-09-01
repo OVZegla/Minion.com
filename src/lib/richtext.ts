@@ -39,27 +39,42 @@ export const RICH_MARKS: RichOption[] = [
   { key: 'rose', label: 'Rose', value: '#fbcfe8' },
 ];
 
-/** Tailles proposées. La taille « normale » ne pose aucune classe. */
-export const RICH_SIZES: RichOption[] = [
-  { key: 'petit', label: 'Petit', value: '1' },
-  { key: 'normal', label: 'Normal', value: '3' },
-  { key: 'grand', label: 'Grand', value: '5' },
-  { key: 'tres-grand', label: 'Très grand', value: '6' },
-];
+/**
+ * Tailles proposées, en points comme dans un traitement de texte.
+ * La taille du corps de texte est 11 pt : elle ne pose aucune classe.
+ */
+export const RICH_SIZE_PT = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72] as const;
+export const RICH_DEFAULT_PT = 11;
+
+export const RICH_SIZES: RichOption[] = RICH_SIZE_PT.map((pt) => ({
+  key: String(pt),
+  label: `${pt}`,
+  value: String(pt),
+}));
 
 /** Polices proposées. La police « normale » ne pose aucune classe. */
 export const RICH_FONTS: RichOption[] = [
-  { key: 'normal', label: 'Normale', value: 'system-ui' },
-  { key: 'serif', label: 'Classique', value: 'Georgia, serif' },
-  { key: 'mono', label: 'Machine', value: 'ui-monospace, monospace' },
+  { key: 'normal', label: 'Police du logiciel', value: 'system-ui' },
+  { key: 'times', label: 'Times New Roman', value: "'Times New Roman', Times, serif" },
+  { key: 'arial', label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
+  { key: 'calibri', label: 'Calibri', value: "Calibri, Carlito, 'Segoe UI', sans-serif" },
+  { key: 'montserrat', label: 'Montserrat', value: "Montserrat, 'Segoe UI', sans-serif" },
+  { key: 'roboto', label: 'Roboto', value: "Roboto, 'Segoe UI', Arial, sans-serif" },
+  { key: 'georgia', label: 'Georgia', value: 'Georgia, serif' },
+  { key: 'mono', label: 'Machine à écrire', value: "ui-monospace, Consolas, monospace" },
 ];
 
 const COLOR_BY_HEX = new Map(RICH_COLORS.map((c) => [c.value, c.key]));
 const MARK_BY_HEX = new Map(RICH_MARKS.map((c) => [c.value, c.key]));
-const COLOR_KEYS = new Set(RICH_COLORS.map((c) => c.key));
-const MARK_KEYS = new Set(RICH_MARKS.map((c) => c.key));
-const SIZE_KEYS = new Set(RICH_SIZES.map((s) => s.key).filter((k) => k !== 'normal'));
-const FONT_KEYS = new Set(RICH_FONTS.map((f) => f.key).filter((k) => k !== 'normal'));
+/** Clés « retour à la normale » : elles annulent une mise en forme englobante. */
+export const RICH_COLOR_NONE = 'defaut';
+export const RICH_MARK_NONE = 'aucun';
+export const RICH_FONT_NONE = 'normal';
+
+const COLOR_KEYS = new Set([...RICH_COLORS.map((c) => c.key), RICH_COLOR_NONE]);
+const MARK_KEYS = new Set([...RICH_MARKS.map((c) => c.key), RICH_MARK_NONE]);
+const SIZE_KEYS = new Set(RICH_SIZES.map((s) => s.key));
+const FONT_KEYS = new Set(RICH_FONTS.map((f) => f.key));
 
 /* ------------------------------------------------------------------ */
 /* Entités                                                             */
@@ -144,45 +159,66 @@ function normalizeColor(raw: string): string | null {
   return `#${part(rgb[1])}${part(rgb[2])}${part(rgb[3])}`;
 }
 
-/** Taille demandée par le navigateur → clé de taille connue, ou null. */
+/**
+ * Taille demandée → clé de taille connue (en points), ou null.
+ *
+ * On accepte les points, les pixels et les mots-clés du navigateur, puis on
+ * arrondit à la taille la plus proche de la liste proposée. La taille du corps
+ * de texte ne pose aucune classe.
+ */
+function nearestPt(pt: number): string {
+  return String(
+    RICH_SIZE_PT.reduce((best, candidate) =>
+      Math.abs(candidate - pt) < Math.abs(best - pt) ? candidate : best,
+    ),
+  );
+}
+
+/**
+ * Attribut `size` d'une balise `<font>` : ancienne échelle 1 à 7, sans rapport
+ * avec les points. Utilisée par les navigateurs pour execCommand('fontSize').
+ */
+function sizeFromFontAttr(raw: string): string | null {
+  const legacy: Record<string, number> = { '1': 8, '2': 10, '3': 11, '4': 12, '5': 14, '6': 18, '7': 24 };
+  const pt = legacy[raw.trim()];
+  return pt === undefined || pt === RICH_DEFAULT_PT ? null : String(pt);
+}
+
 function normalizeSize(raw: string): string | null {
   const value = raw.trim().toLowerCase();
-  const byNumber: Record<string, string> = {
-    '1': 'petit',
-    '2': 'petit',
-    '3': '',
-    '4': '',
-    '5': 'grand',
-    '6': 'tres-grand',
-    '7': 'tres-grand',
-  };
-  if (value in byNumber) return byNumber[value] || null;
-  const byName: Record<string, string> = {
-    'x-small': 'petit',
-    small: 'petit',
-    medium: '',
-    large: 'grand',
-    'x-large': 'tres-grand',
-    'xx-large': 'tres-grand',
-  };
-  if (value in byName) return byName[value] || null;
-  const px = /^(\d+(?:\.\d+)?)px$/.exec(value);
-  if (px) {
-    const size = Number(px[1]);
-    if (size <= 13) return 'petit';
-    if (size >= 24) return 'tres-grand';
-    if (size >= 18) return 'grand';
-    return null;
+  let pt: number | null = null;
+
+  const direct = /^(\d+(?:\.\d+)?)\s*(pt|px)?$/.exec(value);
+  if (direct) {
+    const amount = Number(direct[1]);
+    pt = direct[2] === 'px' ? amount * 0.75 : amount;
+  } else {
+    const byName: Record<string, number> = {
+      'xx-small': 8,
+      'x-small': 9,
+      small: 10,
+      medium: 11,
+      large: 14,
+      'x-large': 18,
+      'xx-large': 24,
+    };
+    if (value in byName) pt = byName[value];
   }
-  return null;
+  if (pt === null || !Number.isFinite(pt) || pt <= 0) return null;
+  const nearest = nearestPt(pt);
+  return nearest === String(RICH_DEFAULT_PT) ? null : nearest;
 }
 
 /** Police demandée → clé de police connue, ou null. */
 function normalizeFont(raw: string): string | null {
-  const value = raw.toLowerCase();
+  const value = raw.toLowerCase().replace(/["']/g, '');
+  if (/times|liberation serif|tinos/.test(value)) return 'times';
+  if (/arial|helvetica|liberation sans|arimo/.test(value)) return 'arial';
+  if (/calibri|carlito/.test(value)) return 'calibri';
+  if (/montserrat/.test(value)) return 'montserrat';
+  if (/roboto/.test(value)) return 'roboto';
+  if (/georgia|garamond|cambria/.test(value)) return 'georgia';
   if (/mono|courier|consolas/.test(value)) return 'mono';
-  if (/serif/.test(value) && !/sans-serif/.test(value)) return 'serif';
-  if (/georgia|garamond|cambria|times/.test(value)) return 'serif';
   return null;
 }
 
@@ -222,8 +258,8 @@ function marksFromTag(tag: string, attrs: Record<string, string>): Marks {
       delta.color = name.slice(5);
     } else if (name.startsWith('rt-m-') && MARK_KEYS.has(name.slice(5))) {
       delta.mark = name.slice(5);
-    } else if (name.startsWith('rt-s-') && SIZE_KEYS.has(name.slice(5))) {
-      delta.size = name.slice(5);
+    } else if (name.startsWith('rt-pt-') && SIZE_KEYS.has(name.slice(6))) {
+      delta.size = name.slice(6);
     } else if (name.startsWith('rt-f-') && FONT_KEYS.has(name.slice(5))) {
       delta.font = name.slice(5);
     }
@@ -235,7 +271,7 @@ function marksFromTag(tag: string, attrs: Record<string, string>): Marks {
     if (key) delta.color = key;
   }
   if (attrs.size) {
-    const key = normalizeSize(attrs.size);
+    const key = sizeFromFontAttr(attrs.size);
     if (key) delta.size = key;
   }
   if (attrs.face) {
@@ -384,10 +420,10 @@ function toRuns(input: string): Run[] {
 
 function classesFor(marks: Marks): string[] {
   const classes: string[] = [];
-  if (marks.color) classes.push(`rt-c-${marks.color}`);
-  if (marks.mark) classes.push(`rt-m-${marks.mark}`);
-  if (marks.size) classes.push(`rt-s-${marks.size}`);
-  if (marks.font) classes.push(`rt-f-${marks.font}`);
+  if (marks.color && marks.color !== RICH_COLOR_NONE) classes.push(`rt-c-${marks.color}`);
+  if (marks.mark && marks.mark !== RICH_MARK_NONE) classes.push(`rt-m-${marks.mark}`);
+  if (marks.size && marks.size !== String(RICH_DEFAULT_PT)) classes.push(`rt-pt-${marks.size}`);
+  if (marks.font && marks.font !== RICH_FONT_NONE) classes.push(`rt-f-${marks.font}`);
   return classes;
 }
 

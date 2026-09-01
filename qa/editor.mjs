@@ -107,7 +107,7 @@ phase = '2-mise-en-forme';
 await addBlock('Texte');
 const zone = page.locator('[role=textbox][aria-label="Texte"]').last();
 await zone.click();
-await page.keyboard.type('gras italique souligne couleur');
+await page.keyboard.type('gras italique souligne couleur surligne taille police');
 await page.waitForTimeout(300);
 
 const selectWord = async (word) => {
@@ -123,35 +123,78 @@ const selectWord = async (word) => {
       range.setStart(node, index);
       range.setEnd(node, index + target.length);
       const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
       el.focus();
       selection.removeAllRanges();
       selection.addRange(range);
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
       return true;
     }
     return false;
   }, word);
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(250);
 };
 
-phase = '2a-gras'; await selectWord('gras');
+await selectWord('gras');
+check('Le bouton Gras est éteint avant', (await page.getByRole('button', { name: 'Gras' }).getAttribute('aria-pressed')) === 'false');
 await page.getByRole('button', { name: 'Gras' }).click();
-await page.waitForTimeout(300);
+await page.waitForTimeout(350);
+check(
+  'Le bouton Gras s’allume une fois appliqué',
+  (await page.getByRole('button', { name: 'Gras' }).getAttribute('aria-pressed')) === 'true',
+);
 
 await selectWord('italique');
 await page.getByRole('button', { name: 'Italique' }).click();
 await page.waitForTimeout(300);
+check(
+  'Le bouton Italique s’allume',
+  (await page.getByRole('button', { name: 'Italique' }).getAttribute('aria-pressed')) === 'true',
+);
+check(
+  'Le bouton Gras est éteint sur un autre mot',
+  (await page.getByRole('button', { name: 'Gras' }).getAttribute('aria-pressed')) === 'false',
+);
 
 await selectWord('souligne');
 await page.getByRole('button', { name: 'Souligné' }).click();
 await page.waitForTimeout(300);
 
-phase = '2d-couleur'; await selectWord('couleur');
-await page.getByLabel('Couleur').selectOption('rouge');
-await page.waitForTimeout(400);
+// Couleur : carrés de couleur dans une palette, pas une liste déroulante.
+await selectWord('couleur');
+await page.getByRole('button', { name: 'Couleur du texte' }).click();
+await page.waitForTimeout(250);
+check('La palette de couleurs propose des carrés', (await page.getByRole('button', { name: 'Rouge' }).count()) > 0);
+await page.getByRole('button', { name: 'Rouge' }).click();
+await page.waitForTimeout(350);
 
-await page.waitForTimeout(1500);
+await selectWord('surligne');
+await page.getByRole('button', { name: 'Surligner' }).click();
+await page.waitForTimeout(250);
+await page.getByRole('button', { name: 'Jaune' }).click();
+await page.waitForTimeout(350);
+
+// Taille en points, comme dans un traitement de texte.
+await selectWord('taille');
+await page.getByLabel('Taille').selectOption('18');
+await page.waitForTimeout(400);
+check('La taille affichée suit la sélection', (await page.getByLabel('Taille').inputValue()) === '18');
+
+// Police.
+await selectWord('police');
+await page.getByLabel('Police').selectOption('montserrat');
+await page.waitForTimeout(400);
+check('La police affichée suit la sélection', (await page.getByLabel('Police').inputValue()) === 'montserrat');
+
+const optionsTaille = await page.locator('select[aria-label="Taille"] option').allTextContents();
+check('Les tailles sont en points', optionsTaille.slice(0, 5).join(',') === '8,9,10,11,12', optionsTaille.join(','));
+const optionsPolice = await page.locator('select[aria-label="Police"] option').allTextContents();
+check(
+  'Les polices demandées sont proposées',
+  ['Times New Roman', 'Arial', 'Calibri', 'Montserrat', 'Roboto'].every((f) => optionsPolice.includes(f)),
+  optionsPolice.join(' | '),
+);
+
+await page.waitForTimeout(1600);
 
 const stored = await page.evaluate(async (url) => {
   const id = url.split('/').pop();
@@ -166,11 +209,14 @@ const stored = await page.evaluate(async (url) => {
   return JSON.stringify(course.blocks);
 }, courseUrl);
 
-check('Gras enregistré', stored.includes('<b>gras</b>'), stored.slice(-260));
+check('Gras enregistré', stored.includes('<b>gras</b>'), stored.slice(-300));
 check('Italique enregistré', stored.includes('<i>italique</i>'));
 check('Souligné enregistré', stored.includes('<u>souligne</u>'));
 check('Couleur enregistrée comme classe de thème', stored.includes('rt-c-rouge'));
-check('Aucun style en dur enregistré', !stored.includes('style='), stored.slice(-260));
+check('Surlignage enregistré', stored.includes('rt-m-jaune'));
+check('Taille enregistrée en points', stored.includes('rt-pt-18'), stored.slice(-300));
+check('Police enregistrée', stored.includes('rt-f-montserrat'));
+check('Aucun style en dur enregistré', !stored.includes('style='), stored.slice(-300));
 
 /* ---------- 3. La mise en forme survit au rechargement ---------- */
 phase = '3-rechargement';
@@ -184,6 +230,25 @@ const rendered = await page.evaluate(() => {
 });
 check('Le gras est toujours là après rechargement', rendered.includes('<b>gras</b>'));
 check('La couleur est toujours là après rechargement', rendered.includes('rt-c-rouge'));
+check('La taille est toujours là après rechargement', rendered.includes('rt-pt-18'));
+check('La police est toujours là après rechargement', rendered.includes('rt-f-montserrat'));
+
+/* ---------- 3b. Menu d'ajout de bloc ---------- */
+phase = '3b-menu-blocs';
+
+await page.getByRole('button', { name: 'Ajouter un bloc' }).click();
+await page.waitForTimeout(350);
+const carte = page.getByRole('button', { name: 'Texte', exact: true }).first();
+const boite = await carte.boundingBox();
+check('Les cases du menu sont grandes', boite && boite.height >= 80, boite ? `${Math.round(boite.height)}px` : 'introuvable');
+const iconesMenu = await page.evaluate(() => {
+  const menu = [...document.querySelectorAll('button')].filter((b) => /Liste à puces/.test(b.textContent || ''));
+  return menu.length > 0 && menu[0].querySelector('svg') !== null;
+});
+check('Chaque case a une icône', iconesMenu);
+// Une fois ouvert, le bouton s'intitule « Fermer ».
+await page.getByRole('button', { name: 'Fermer' }).first().click();
+await page.waitForTimeout(250);
 
 /* ---------- 4. Le collage n'introduit pas de HTML ---------- */
 phase = '4-collage';
@@ -370,7 +435,9 @@ await page.evaluate((sel) => {
   }
 }, SEC);
 await page.waitForTimeout(200);
-await page.getByLabel('Surligner').selectOption('jaune');
+await page.getByRole('button', { name: 'Surligner' }).click();
+await page.waitForTimeout(250);
+await page.getByRole('button', { name: 'Jaune' }).click();
 await page.waitForTimeout(1800);
 
 await page.goto(ficheUrl, { waitUntil: 'networkidle' });
@@ -378,6 +445,133 @@ await page.locator('input[aria-label="Titre de la fiche"]').waitFor({ state: 'vi
 await page.waitForTimeout(1500);
 const htmlFiche = await page.$$eval(SEC, (nodes) => nodes.map((n) => n.innerHTML).join(''));
 check('Le surlignage d’une fiche est conservé', htmlFiche.includes('rt-m-jaune'), htmlFiche.slice(0, 140));
+
+/* ---------- 9. Révisions : modifier et valider ---------- */
+phase = '9-revisions';
+
+await goto('/revisions');
+const modifierSession = page.getByRole('button', { name: /^Modifier la session/ });
+check('Une session peut être modifiée', (await modifierSession.count()) > 0);
+const validerSession = page.getByRole('button', { name: 'Terminée' });
+check('Une session peut être marquée faite', (await validerSession.count()) > 0);
+
+if ((await modifierSession.count()) > 0) {
+  await modifierSession.first().click();
+  await page.waitForTimeout(600);
+  const titreSession = 'SESSION-MODIFIEE-' + Date.now();
+  await page.locator('#rs-title').fill(titreSession);
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await page.waitForTimeout(1200);
+  const enBaseSession = await page.evaluate(async (attendu) => {
+    const open = indexedDB.open('minion-com');
+    const db = await new Promise((res, rej) => { open.onsuccess = () => res(open.result); open.onerror = () => rej(open.error); });
+    const all = await new Promise((res, rej) => {
+      const tx = db.transaction('revisionSessions', 'readonly');
+      const req = tx.objectStore('revisionSessions').getAll();
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+    return all.some((s) => s.title === attendu);
+  }, titreSession);
+  check('La session modifiée est enregistrée', enBaseSession);
+}
+
+const avantValidation = await page.evaluate(async () => {
+  const open = indexedDB.open('minion-com');
+  const db = await new Promise((res, rej) => { open.onsuccess = () => res(open.result); open.onerror = () => rej(open.error); });
+  const all = await new Promise((res, rej) => {
+    const tx = db.transaction('revisionSessions', 'readonly');
+    const req = tx.objectStore('revisionSessions').getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+  return all.filter((s) => s.status === 'done').length;
+});
+await page.getByRole('button', { name: 'Terminée' }).first().click();
+await page.waitForTimeout(1200);
+const apresValidation = await page.evaluate(async () => {
+  const open = indexedDB.open('minion-com');
+  const db = await new Promise((res, rej) => { open.onsuccess = () => res(open.result); open.onerror = () => rej(open.error); });
+  const all = await new Promise((res, rej) => {
+    const tx = db.transaction('revisionSessions', 'readonly');
+    const req = tx.objectStore('revisionSessions').getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+  return all.filter((s) => s.status === 'done').length;
+});
+check('Valider une session la marque bien faite', apresValidation === avantValidation + 1, `${avantValidation} -> ${apresValidation}`);
+
+/* ---------- 10. Flashcards : filtres, sélection, mode mélangé ---------- */
+phase = '10-flashcards';
+
+await goto('/flashcards');
+check('Filtre par matière', (await page.locator('#filter-subject').count()) === 1);
+check('Filtre par date d’ajout', (await page.locator('#filter-added').count()) === 1);
+check('Choix de l’ordre', (await page.locator('#filter-order').count()) === 1);
+check('Recherche dans les cartes', (await page.locator('#filter-query').count()) === 1);
+check('Nombre de cartes par séance', (await page.locator('#session-size').count()) === 1);
+check('Filtre par niveau : Maîtrisé', (await page.getByRole('button', { name: 'Maîtrisé' }).count()) > 0);
+check('Bouton de séance mélangée', (await page.getByRole('button', { name: 'Séance mélangée' }).count()) > 0);
+
+const totalCartes = await page.locator('input[aria-label^="Sélectionner"]').count();
+check('Chaque carte a une case à cocher', totalCartes > 0, `${totalCartes} cartes`);
+
+// Filtrer par niveau réduit vraiment la liste.
+await page.getByRole('button', { name: 'Maîtrisé' }).first().click();
+await page.waitForTimeout(700);
+const apresFiltre = await page.locator('input[aria-label^="Sélectionner"]').count();
+check('Le filtre par niveau réduit la liste', apresFiltre < totalCartes, `${totalCartes} -> ${apresFiltre}`);
+await page.getByRole('button', { name: 'Tous les niveaux' }).click();
+await page.waitForTimeout(700);
+
+// Sélection puis séance limitée à 10 cartes.
+await page.getByRole('button', { name: 'Tout sélectionner' }).click();
+await page.waitForTimeout(500);
+const coche = await page.locator('input[aria-label^="Sélectionner"]:checked').count();
+check('« Tout sélectionner » coche les cartes', coche === totalCartes, `${coche}/${totalCartes}`);
+
+await page.locator('#session-size').selectOption('10');
+await page.waitForTimeout(300);
+await page.getByRole('button', { name: 'Séance mélangée' }).click();
+await page.waitForTimeout(900);
+const titreSeance = await page.textContent('body');
+check('La séance mélangée démarre', /Ma sélection/.test(titreSeance), titreSeance.slice(0, 90));
+check(
+  'La séance est limitée au nombre demandé',
+  /Ma sélection · (10|[1-9]) carte/.test(titreSeance),
+  (titreSeance.match(/Ma sélection · \d+ cartes?/) || ['?'])[0],
+);
+
+/* ---------- 11. Export PDF ---------- */
+phase = '11-pdf';
+
+await goto('/fiches');
+await page.locator('a[href^="/fiches/"]').first().click();
+await page.locator('input[aria-label="Titre de la fiche"]').waitFor({ state: 'visible', timeout: 20000 });
+await page.waitForTimeout(800);
+check('Une fiche peut être exportée en PDF', (await page.getByRole('button', { name: 'Exporter en PDF' }).count()) > 0);
+
+await goto('/methodes');
+await page.locator('a[href^="/methodes/"]').first().click();
+await page.waitForTimeout(1500);
+check('Une méthode peut être exportée en PDF', (await page.getByRole('button', { name: 'Exporter en PDF' }).count()) > 0);
+
+await page.goto(courseUrl, { waitUntil: 'networkidle' });
+await page.locator('input[aria-label="Titre du cours"]').waitFor({ state: 'visible', timeout: 20000 });
+await page.waitForTimeout(800);
+check('Un cours peut être exporté en PDF', (await page.getByRole('button', { name: 'Exporter en PDF' }).count()) > 0);
+
+// À l'impression, l'interface d'édition disparaît.
+await page.emulateMedia({ media: 'print' });
+await page.waitForTimeout(400);
+const barreVisible = await page.getByRole('button', { name: 'Gras' }).isVisible().catch(() => false);
+check('La barre de mise en forme n’est pas imprimée', !barreVisible);
+const ajoutVisible = await page.getByRole('button', { name: 'Ajouter un bloc' }).isVisible().catch(() => false);
+check('Le bouton « Ajouter un bloc » n’est pas imprimé', !ajoutVisible);
+const texteImprime = await page.locator('[role=textbox][aria-label="Texte"]').first().isVisible();
+check('Le contenu du cours est bien imprimé', texteImprime);
+await page.emulateMedia({ media: 'screen' });
 
 await browser.close();
 console.log('\n--- ERREURS CONSOLE ---');

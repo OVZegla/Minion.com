@@ -37,6 +37,16 @@ moteur de sauvegarde (`src/lib/autosave.ts`).
   balise n'entre dans le document et rien ne s'exécute.
 * **Bouton Enregistrer et Ctrl+S**, champs de cours modifiables (matière,
   numéro, enseignant, salle), création d'une flashcard.
+* **Barre de mise en forme** : les boutons s'allument selon la sélection, les
+  couleurs sont des carrés, les tailles sont en points, les polices demandées
+  sont proposées, et tout est relu dans IndexedDB après application.
+* **Révisions** : une session se modifie et se marque comme faite, vérifié en
+  base.
+* **Flashcards** : filtres (matière, niveau, date d'ajout, recherche), cases à
+  cocher, et séance mélangée limitée au nombre de cartes choisi.
+* **Export PDF** : bouton présent sur les cours, fiches et méthodes, et
+  vérification que l'interface d'édition disparaît en mode impression alors que
+  le contenu reste.
 
 ## Application de bureau
 
@@ -54,6 +64,10 @@ npm run qa:desktop      # lance Electron et vérifie la fenêtre réelle
 2. seconde session — les données saisies pendant la première session sont
    toujours là, y compris une saisie encore en cours au moment où la fenêtre a
    été fermée.
+
+L'export PDF y est vérifié pour de vrai : le bouton est cliqué dans
+l'application lancée, puis le fichier écrit sur le disque est relu (en-tête
+`%PDF` et taille non nulle).
 
 Ce second lancement est essentiel : il vérifie que l'origine ne change pas d'une
 ouverture à l'autre, sans quoi IndexedDB repartirait vide à chaque démarrage.

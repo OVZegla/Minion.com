@@ -7,12 +7,14 @@ import { ArrowLeft, Copy, Plus, Printer, Star, Trash2, X } from 'lucide-react';
 import { db } from '@/db/db';
 import { deleteStudySheetCascade, duplicateStudySheet } from '@/db/repo';
 import { useChapters, useStudySheet, useSubject, useSubjects } from '@/hooks/data';
-import { RichText, RichToolbar } from '@/features/courses/RichText';
+import { RichText } from '@/features/courses/RichText';
+import { RichToolbar } from '@/features/courses/RichToolbar';
 import { EmptyState, MasteryPill, SubjectBadge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { useAutosave } from '@/hooks/useAutosave';
 import { SaveButton } from '@/components/ui/SaveButton';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { nextMastery } from '@/lib/progress';
 import { newId } from '@/lib/id';
 import { nowISO } from '@/lib/dates';
@@ -76,6 +78,10 @@ export default function SheetPage({ params }: { params: Promise<{ id: string }> 
         </Link>
         <div className="flex items-center gap-1">
           <SaveButton autosave={autosave} />
+          <ExportPdfButton
+            folder={subject ? `fiches/${subject.shortName}` : 'fiches'}
+            fileName={sheet.title || 'fiche'}
+          />
           <button
             type="button"
             className="btn-ghost h-9 w-9 rounded-xl p-0"

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CircleCheckBig, Layers, Play, Plus, Timer } from 'lucide-react';
+import { CircleCheckBig, Layers, Pencil, Play, Plus, Timer } from 'lucide-react';
 import { db } from '@/db/db';
 import { syncRevisionEvent } from '@/db/repo';
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui';
 import { RevisionPlanner } from '@/features/revision/RevisionPlanner';
 import { FlashcardPlayer } from '@/features/revision/FlashcardPlayer';
+import { SessionEditor } from '@/features/revision/SessionEditor';
 import {
   useFlashcards,
   useProgressBySubject,
@@ -25,7 +26,7 @@ import {
 import { useUi } from '@/components/layout/AppProviders';
 import { useToast } from '@/components/ui/Toast';
 import { fmtDuration, nowISO, relativeDayLabel, todayISO } from '@/lib/dates';
-import type { RevisionStatus } from '@/types';
+import type { RevisionSession, RevisionStatus } from '@/types';
 
 type Tab = 'aujourdhui' | 'plan' | 'progression';
 
@@ -40,6 +41,7 @@ export default function RevisionsPage() {
   const [tab, setTab] = useState<Tab>('aujourdhui');
   const [deckSubject, setDeckSubject] = useState<string>('');
   const [playing, setPlaying] = useState(false);
+  const [editing, setEditing] = useState<RevisionSession | null>(null);
 
   const today = todayISO();
 
@@ -177,6 +179,14 @@ export default function RevisionsPage() {
                         >
                           Annuler
                         </button>
+                        <button
+                          type="button"
+                          className="btn-ghost h-9 w-9 rounded-xl p-0"
+                          aria-label={`Modifier la session : ${session.title}`}
+                          onClick={() => setEditing(session)}
+                        >
+                          <Pencil size={15} />
+                        </button>
                       </div>
                     </li>
                   );
@@ -208,6 +218,21 @@ export default function RevisionsPage() {
                       <span className="shrink-0 text-[12px] text-muted">
                         {fmtDuration(session.durationMinutes)}
                       </span>
+                      <button
+                        type="button"
+                        className="btn-outline shrink-0 text-[13px]"
+                        onClick={() => void setStatus(session.id, 'done')}
+                      >
+                        Terminée
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost h-9 w-9 shrink-0 rounded-xl p-0"
+                        aria-label={`Modifier la session : ${session.title}`}
+                        onClick={() => setEditing(session)}
+                      >
+                        <Pencil size={15} />
+                      </button>
                     </li>
                   );
                 })}
@@ -295,6 +320,12 @@ export default function RevisionsPage() {
           </Link>
         </div>
       ) : null}
+
+      <SessionEditor
+        session={editing}
+        open={editing !== null}
+        onClose={() => setEditing(null)}
+      />
 
       <FlashcardPlayer
         cards={deck}

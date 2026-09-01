@@ -133,7 +133,19 @@ suite (`flush`) au lieu d'être perdue. `qa/autosave.mjs` et la vérification
 
 Dans les cours et les fiches, le texte se met en forme : gras, italique,
 souligné, barré, couleur, surlignage, taille et police. La barre reste collée
-en haut de l'éditeur et agit sur la sélection courante.
+en haut de l'éditeur, agit sur la sélection courante, et ses boutons s'allument
+selon ce qui est déjà appliqué là où se trouve le curseur.
+
+Les tailles sont en **points**, comme dans un traitement de texte (8 à 72, le
+corps de texte étant à 11). Les polices proposées sont Times New Roman, Arial,
+Calibri, Montserrat, Roboto, Georgia et une police à chasse fixe ; Montserrat
+et Roboto sont **embarquées** dans `public/fonts` pour que l'application
+fonctionne entièrement hors ligne, sans rien charger depuis Internet.
+
+`execCommand` ne sait poser ni une taille en points ni une classe. On lui fait
+donc marquer la sélection avec une taille factice — lui seul sait découper
+proprement une sélection à cheval sur plusieurs éléments — puis on remplace ces
+marqueurs par nos propres balises.
 
 Le contenu est stocké dans un HTML minuscule, **reconstruit** par
 `src/lib/richtext.ts` à chaque lecture comme à chaque écriture : une balise
@@ -145,6 +157,21 @@ ne doit jamais passer.
 
 Les couleurs sont des **classes** (`rt-c-rouge`, `rt-m-jaune`) et non des
 styles en dur : elles restent lisibles en mode clair comme en mode sombre.
+
+### Export PDF
+
+Les cours, les fiches de révision et les quatre méthodes juridiques (fiche
+d'arrêt, cas pratique, dissertation, commentaire) s'exportent en PDF.
+
+Dans l'application de bureau, le fichier est écrit directement dans les
+dossiers de l'utilisatrice, au même endroit que ses documents, puis
+l'emplacement est ouvert. Sur le web, la boîte d'impression du navigateur prend
+le relais (« Enregistrer au format PDF »).
+
+Dans les deux cas c'est la feuille de style d'impression qui décide : barre
+latérale, barre de mise en forme et boutons d'édition disparaissent, les
+encadrés et les tableaux ne sont pas coupés entre deux pages, et les couleurs
+du texte sont conservées.
 
 ### Modèle
 

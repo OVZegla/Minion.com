@@ -33,17 +33,49 @@ describe('sanitizeRich — mise en forme conservée', () => {
     );
   });
 
-  it('traduit la taille et la police', () => {
-    expect(sanitizeRich('<font size="6">grand</font>')).toBe(
-      '<span class="rt-s-tres-grand">grand</span>',
+  it('traduit les tailles en points', () => {
+    // Attribut <font size> : ancienne echelle 1 a 7 du navigateur.
+    expect(sanitizeRich('<font size="6">grand</font>')).toBe('<span class="rt-pt-18">grand</span>');
+    // Feuille de style : points ou pixels, arrondis a la taille la plus proche.
+    expect(sanitizeRich('<span style="font-size: 24pt">x</span>')).toBe(
+      '<span class="rt-pt-24">x</span>',
     );
-    expect(sanitizeRich('<span style="font-family: Georgia, serif">x</span>')).toBe(
-      '<span class="rt-f-serif">x</span>',
+    expect(sanitizeRich('<span style="font-size: 32px">x</span>')).toBe(
+      '<span class="rt-pt-24">x</span>',
+    );
+    expect(sanitizeRich('<span class="rt-pt-14">x</span>')).toBe('<span class="rt-pt-14">x</span>');
+  });
+
+  it('traduit les polices proposées', () => {
+    expect(sanitizeRich('<font face="Times New Roman">x</font>')).toBe(
+      '<span class="rt-f-times">x</span>',
+    );
+    expect(sanitizeRich('<span style="font-family: Arial, sans-serif">x</span>')).toBe(
+      '<span class="rt-f-arial">x</span>',
+    );
+    expect(sanitizeRich('<span class="rt-f-montserrat">x</span>')).toBe(
+      '<span class="rt-f-montserrat">x</span>',
+    );
+    expect(sanitizeRich('<span class="rt-f-roboto">x</span>')).toBe(
+      '<span class="rt-f-roboto">x</span>',
     );
   });
 
-  it('la taille normale ne laisse aucune classe', () => {
+  it('la taille du corps de texte ne laisse aucune classe', () => {
     expect(sanitizeRich('<font size="3">normal</font>')).toBe('normal');
+    expect(sanitizeRich('<span class="rt-pt-11">normal</span>')).toBe('normal');
+  });
+
+  it('le retour à la normale annule une mise en forme englobante', () => {
+    expect(
+      sanitizeRich('<span class="rt-c-rouge">rouge <span class="rt-c-defaut">normal</span></span>'),
+    ).toBe('<span class="rt-c-rouge">rouge </span>normal');
+    expect(
+      sanitizeRich('<span class="rt-m-jaune">jaune <span class="rt-m-aucun">rien</span></span>'),
+    ).toBe('<span class="rt-m-jaune">jaune </span>rien');
+    expect(
+      sanitizeRich('<span class="rt-f-times">times <span class="rt-f-normal">normal</span></span>'),
+    ).toBe('<span class="rt-f-times">times </span>normal');
   });
 
   it('combine plusieurs mises en forme dans un ordre stable', () => {
@@ -53,7 +85,7 @@ describe('sanitizeRich — mise en forme conservée', () => {
   });
 
   it('est idempotent sur son propre résultat', () => {
-    const source = '<b>a</b><span class="rt-c-jaune rt-s-grand">b</span><br>c';
+    const source = '<b>a</b><span class="rt-c-jaune rt-pt-16">b</span><br>c';
     expect(sanitizeRich(sanitizeRich(source))).toBe(sanitizeRich(source));
   });
 });

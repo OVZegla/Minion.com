@@ -21,22 +21,49 @@ export interface RichOption {
   value: string;
 }
 
-/** Couleurs de texte proposées. */
+/**
+ * Couleurs de texte proposées.
+ *
+ * La valeur sert de repère interne : c'est une classe qui est réellement
+ * posée, et la teinte affichée est adaptée au mode clair ou sombre dans
+ * globals.css.
+ */
 export const RICH_COLORS: RichOption[] = [
-  { key: 'jaune', label: 'Jaune', value: '#ca8a04' },
   { key: 'rouge', label: 'Rouge', value: '#dc2626' },
+  { key: 'brique', label: 'Brique', value: '#b91c1c' },
+  { key: 'orange', label: 'Orange', value: '#ea580c' },
+  { key: 'ambre', label: 'Ambre', value: '#d97706' },
+  { key: 'jaune', label: 'Jaune', value: '#ca8a04' },
+  { key: 'olive', label: 'Olive', value: '#65a30d' },
   { key: 'vert', label: 'Vert', value: '#16a34a' },
+  { key: 'emeraude', label: 'Émeraude', value: '#059669' },
+  { key: 'turquoise', label: 'Turquoise', value: '#0d9488' },
+  { key: 'cyan', label: 'Cyan', value: '#0891b2' },
   { key: 'bleu', label: 'Bleu', value: '#2563eb' },
+  { key: 'indigo', label: 'Indigo', value: '#4f46e5' },
   { key: 'violet', label: 'Violet', value: '#9333ea' },
+  { key: 'fuchsia', label: 'Fuchsia', value: '#c026d3' },
+  { key: 'rose', label: 'Rose', value: '#e11d48' },
+  { key: 'marron', label: 'Marron', value: '#92400e' },
   { key: 'gris', label: 'Gris', value: '#6b7280' },
+  { key: 'ardoise', label: 'Ardoise', value: '#475569' },
 ];
 
 /** Couleurs de surlignage proposées. */
 export const RICH_MARKS: RichOption[] = [
   { key: 'jaune', label: 'Jaune', value: '#fef08a' },
-  { key: 'vert', label: 'Vert', value: '#bbf7d0' },
-  { key: 'bleu', label: 'Bleu', value: '#bfdbfe' },
+  { key: 'or', label: 'Or', value: '#fde68a' },
+  { key: 'orange', label: 'Orange', value: '#fed7aa' },
+  { key: 'peche', label: 'Pêche', value: '#fecaca' },
   { key: 'rose', label: 'Rose', value: '#fbcfe8' },
+  { key: 'lilas', label: 'Lilas', value: '#e9d5ff' },
+  { key: 'lavande', label: 'Lavande', value: '#ddd6fe' },
+  { key: 'bleu', label: 'Bleu', value: '#bfdbfe' },
+  { key: 'ciel', label: 'Ciel', value: '#bae6fd' },
+  { key: 'menthe', label: 'Menthe', value: '#a7f3d0' },
+  { key: 'vert', label: 'Vert', value: '#bbf7d0' },
+  { key: 'citron', label: 'Citron', value: '#d9f99d' },
+  { key: 'gris', label: 'Gris', value: '#e5e7eb' },
 ];
 
 /**

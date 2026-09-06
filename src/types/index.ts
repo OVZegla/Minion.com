@@ -132,8 +132,25 @@ export interface Chapter {
 
 export type CourseKind = 'CM' | 'TD' | 'TP' | 'AUTRE';
 
+/**
+ * Couleur de fond d'un bloc. `aucun` (ou l'absence de valeur) laisse
+ * l'apparence par defaut du type de bloc.
+ */
+export type BlockBackground =
+  | 'aucun'
+  | 'jaune'
+  | 'orange'
+  | 'rose'
+  | 'rouge'
+  | 'violet'
+  | 'bleu'
+  | 'ciel'
+  | 'vert'
+  | 'menthe'
+  | 'gris';
+
 /** Blocs de l'editeur de cours — contenu structure, jamais du HTML brut */
-export type CourseBlock =
+export type CourseBlock = { background?: BlockBackground } & (
   | { id: ID; type: 'heading'; level: 1 | 2 | 3; text: string }
   | { id: ID; type: 'paragraph'; text: string }
   | { id: ID; type: 'bullets'; items: string[] }
@@ -154,7 +171,7 @@ export type CourseBlock =
       number?: string;
       principle?: string;
       scope?: string;
-    };
+    });
 
 export type CourseStatus = 'to_write' | 'in_progress' | 'complete';
 

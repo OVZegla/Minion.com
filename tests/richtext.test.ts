@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  RICH_COLORS,
+  RICH_FONTS,
+  RICH_MARKS,
+  RICH_SIZE_PT,
+  RICH_DEFAULT_PT,
   isRichEmpty,
   plainToRich,
   richToPlain,
@@ -87,6 +92,49 @@ describe('sanitizeRich — mise en forme conservée', () => {
   it('est idempotent sur son propre résultat', () => {
     const source = '<b>a</b><span class="rt-c-jaune rt-pt-16">b</span><br>c';
     expect(sanitizeRich(sanitizeRich(source))).toBe(sanitizeRich(source));
+  });
+});
+
+describe('toutes les options proposées sont acceptées', () => {
+  // Garde-fou : ajouter une couleur à la palette sans l'autoriser dans le
+  // nettoyeur la ferait disparaître silencieusement à l'enregistrement.
+  it('chaque couleur de texte proposée survit', () => {
+    expect(RICH_COLORS.length).toBeGreaterThanOrEqual(15);
+    for (const color of RICH_COLORS) {
+      expect(sanitizeRich(`<span class="rt-c-${color.key}">x</span>`)).toBe(
+        `<span class="rt-c-${color.key}">x</span>`,
+      );
+    }
+  });
+
+  it('chaque couleur de surlignage proposée survit', () => {
+    expect(RICH_MARKS.length).toBeGreaterThanOrEqual(10);
+    for (const mark of RICH_MARKS) {
+      expect(sanitizeRich(`<span class="rt-m-${mark.key}">x</span>`)).toBe(
+        `<span class="rt-m-${mark.key}">x</span>`,
+      );
+    }
+  });
+
+  it('chaque taille proposée survit', () => {
+    for (const pt of RICH_SIZE_PT) {
+      const expected = pt === RICH_DEFAULT_PT ? 'x' : `<span class="rt-pt-${pt}">x</span>`;
+      expect(sanitizeRich(`<span class="rt-pt-${pt}">x</span>`)).toBe(expected);
+    }
+  });
+
+  it('chaque police proposée survit', () => {
+    for (const font of RICH_FONTS) {
+      const expected = font.key === 'normal' ? 'x' : `<span class="rt-f-${font.key}">x</span>`;
+      expect(sanitizeRich(`<span class="rt-f-${font.key}">x</span>`)).toBe(expected);
+    }
+  });
+
+  it('les couleurs des deux palettes sont toutes distinctes', () => {
+    expect(new Set(RICH_COLORS.map((c) => c.key)).size).toBe(RICH_COLORS.length);
+    expect(new Set(RICH_MARKS.map((c) => c.key)).size).toBe(RICH_MARKS.length);
+    expect(new Set(RICH_COLORS.map((c) => c.value)).size).toBe(RICH_COLORS.length);
+    expect(new Set(RICH_MARKS.map((c) => c.value)).size).toBe(RICH_MARKS.length);
   });
 });
 

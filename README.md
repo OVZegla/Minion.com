@@ -157,6 +157,27 @@ ne doit jamais passer.
 
 Les couleurs sont des **classes** (`rt-c-rouge`, `rt-m-jaune`) et non des
 styles en dur : elles restent lisibles en mode clair comme en mode sombre.
+18 couleurs de texte et 13 couleurs de surlignage sont proposées ;
+`tests/palette-css.test.ts` vérifie que chacune a bien une règle de style dans
+les deux thèmes — une couleur proposée mais non stylée ne ferait rien du tout.
+
+Après chaque action de la barre, le contenu du champ est remis dans sa forme
+canonique sans bouger le curseur (repéré en nombre de caractères). Sans cela le
+navigateur empilait les balises : passer à 72 pt puis revenir à 11 pt laissait
+`<span class="rt-pt-72"><span class="rt-pt-11">…</span></span>`, le texte
+redevenait petit mais la hauteur de ligne restait celle du 72.
+
+### Blocs d'un cours
+
+Chaque bloc peut recevoir une **couleur de fond** (`background`), utile pour
+faire ressortir une citation ou un encadré. Quand un fond est choisi, l'encadré
+intérieur devient transparent au lieu d'empiler sa propre couleur.
+
+Les commandes d'un bloc — monter, descendre, colorer, supprimer — sont posées
+**à l'intérieur** de son cadre. Placées à l'extérieur, s'en approcher revenait à
+quitter la zone survolée : elles disparaissaient avant d'être cliquables, et un
+séparateur, qui n'a aucun texte où cliquer, devenait impossible à déplacer ou à
+supprimer.
 
 ### Export PDF
 

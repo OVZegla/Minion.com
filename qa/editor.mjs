@@ -573,6 +573,142 @@ const texteImprime = await page.locator('[role=textbox][aria-label="Texte"]').fi
 check('Le contenu du cours est bien imprimé', texteImprime);
 await page.emulateMedia({ media: 'screen' });
 
+/* ---------- 12. Taille remise à la normale : plus de zone géante ---------- */
+phase = '12-taille-retour';
+
+await page.goto(courseUrl, { waitUntil: 'networkidle' });
+await page.locator('input[aria-label="Titre du cours"]').waitFor({ state: 'visible', timeout: 20000 });
+await page.waitForTimeout(1000);
+await addBlock('Texte');
+const zoneTaille = page.locator('[role=textbox][aria-label="Texte"]').last();
+await zoneTaille.click();
+await page.keyboard.type('test');
+await page.waitForTimeout(400);
+
+const toutSelectionner = async () => {
+  await page.evaluate(() => {
+    const boxes = [...document.querySelectorAll('[role=textbox][aria-label="Texte"]')];
+    const el = boxes[boxes.length - 1];
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+  });
+  await page.waitForTimeout(250);
+};
+const hauteurZone = async () =>
+  page.evaluate(() => {
+    const boxes = [...document.querySelectorAll('[role=textbox][aria-label="Texte"]')];
+    return Math.round(boxes[boxes.length - 1].getBoundingClientRect().height);
+  });
+
+const hauteurDepart = await hauteurZone();
+await toutSelectionner();
+await page.getByLabel('Taille').selectOption('72');
+await page.waitForTimeout(600);
+const hauteurGrande = await hauteurZone();
+check('La zone grandit avec la taille', hauteurGrande > hauteurDepart + 50, `${hauteurDepart} -> ${hauteurGrande}`);
+
+await toutSelectionner();
+await page.getByLabel('Taille').selectOption('11');
+await page.waitForTimeout(600);
+const hauteurRetour = await hauteurZone();
+check(
+  'La zone reprend sa taille quand on revient à 11 pt',
+  Math.abs(hauteurRetour - hauteurDepart) <= 4,
+  `${hauteurDepart} -> ${hauteurGrande} -> ${hauteurRetour}`,
+);
+const htmlPropre = await page.evaluate(() => {
+  const boxes = [...document.querySelectorAll('[role=textbox][aria-label="Texte"]')];
+  return boxes[boxes.length - 1].innerHTML;
+});
+check('Aucune couche de taille ne subsiste', !htmlPropre.includes('rt-pt-72'), htmlPropre);
+
+/* ---------- 13. Palettes élargies ---------- */
+phase = '13-palettes';
+
+await page.locator('[role=textbox][aria-label="Texte"]').last().click();
+await page.waitForTimeout(300);
+await page.getByRole('button', { name: 'Couleur du texte' }).click();
+await page.waitForTimeout(300);
+const carresTexte = await page.evaluate(
+  () => document.querySelectorAll('button[aria-label][title][style*="background"]').length,
+);
+check('Au moins 15 couleurs de texte', carresTexte >= 15, `${carresTexte}`);
+await page.getByRole('button', { name: 'Couleur du texte' }).click();
+await page.waitForTimeout(200);
+await page.getByRole('button', { name: 'Surligner' }).click();
+await page.waitForTimeout(300);
+const carresSurlignage = await page.evaluate(
+  () => document.querySelectorAll('button[aria-label][title][style*="background"]').length,
+);
+check('Au moins 10 couleurs de surlignage', carresSurlignage >= 10, `${carresSurlignage}`);
+await page.getByRole('button', { name: 'Surligner' }).click();
+await page.waitForTimeout(200);
+
+/* ---------- 14. Commandes de bloc et séparateur ---------- */
+phase = '14-commandes-bloc';
+
+await addBlock('Séparateur');
+const separateur = page.locator('[aria-label="Séparateur"]').last();
+const cadreSep = await separateur.boundingBox();
+await page.mouse.move(cadreSep.x + cadreSep.width / 2, cadreSep.y + cadreSep.height / 2);
+await page.waitForTimeout(400);
+const boutonSupprimer = page.getByRole('button', { name: 'Supprimer le bloc' }).last();
+check('Les commandes apparaissent au survol d’un séparateur', await boutonSupprimer.isVisible());
+
+// On va vers le bouton : avec l'ancien placement, hors du cadre, il
+// disparaissait avant d'être atteint.
+const cibleBouton = await boutonSupprimer.boundingBox();
+await page.mouse.move(cibleBouton.x + cibleBouton.width / 2, cibleBouton.y + cibleBouton.height / 2, {
+  steps: 12,
+});
+await page.waitForTimeout(400);
+check('Elles restent visibles quand on va vers elles', await boutonSupprimer.isVisible());
+
+const sepAvant = await page.locator('[aria-label="Séparateur"]').count();
+await boutonSupprimer.click();
+await page.waitForTimeout(800);
+const sepApres = await page.locator('[aria-label="Séparateur"]').count();
+check('Un séparateur peut être supprimé', sepApres === sepAvant - 1, `${sepAvant} -> ${sepApres}`);
+
+/* ---------- 15. Couleur de fond d'un bloc ---------- */
+phase = '15-fond-bloc';
+
+await addBlock('Citation');
+const citation = page.locator('[role=textbox][aria-label="Citation"]').last();
+await citation.click();
+await page.keyboard.type('Nul ne peut se prevaloir de sa propre turpitude');
+await page.waitForTimeout(400);
+
+const blocCitation = page
+  .locator('.group.relative')
+  .filter({ has: page.locator('[aria-label="Citation"]') })
+  .last();
+const cadreCitation = await blocCitation.boundingBox();
+await page.mouse.move(cadreCitation.x + cadreCitation.width / 2, cadreCitation.y + 10);
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: 'Couleur de fond du bloc' }).last().click();
+await page.waitForTimeout(300);
+check('La palette de fonds s’ouvre', (await page.getByRole('button', { name: 'Fond Bleu' }).count()) > 0);
+await page.getByRole('button', { name: 'Fond Bleu' }).last().click();
+await page.waitForTimeout(1600);
+check(
+  'Le fond choisi est appliqué',
+  ((await blocCitation.getAttribute('class')) || '').includes('bb-bleu'),
+);
+
+await page.goto(courseUrl, { waitUntil: 'networkidle' });
+await page.locator('input[aria-label="Titre du cours"]').waitFor({ state: 'visible', timeout: 20000 });
+await page.waitForTimeout(1500);
+check(
+  'Le fond du bloc survit au rechargement',
+  (await page.evaluate(() => document.querySelectorAll('.bb-bleu').length)) > 0,
+);
+
 await browser.close();
 console.log('\n--- ERREURS CONSOLE ---');
 console.log(errors.length ? errors.join('\n') : '(aucune)');

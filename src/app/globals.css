@@ -208,41 +208,126 @@ body {
    lisibles aussi bien en mode clair qu'en mode sombre. */
 @import url('/fonts/fonts.css');
 
-.rt-c-jaune { color: #a16207; }
+/* ---------------------------------------------------------------- */
+/* Couleurs de texte                                                 */
+/* ---------------------------------------------------------------- */
+
 .rt-c-rouge { color: #c2261f; }
+.rt-c-brique { color: #a13029; }
+.rt-c-orange { color: #c2410c; }
+.rt-c-ambre { color: #b45309; }
+.rt-c-jaune { color: #a16207; }
+.rt-c-olive { color: #4d7c0f; }
 .rt-c-vert { color: #15803d; }
+.rt-c-emeraude { color: #047857; }
+.rt-c-turquoise { color: #0f766e; }
+.rt-c-cyan { color: #0e7490; }
 .rt-c-bleu { color: #1d4ed8; }
+.rt-c-indigo { color: #4338ca; }
 .rt-c-violet { color: #7e22ce; }
+.rt-c-fuchsia { color: #a21caf; }
+.rt-c-rose { color: #be123c; }
+.rt-c-marron { color: #78350f; }
 .rt-c-gris { color: #6b7280; }
+.rt-c-ardoise { color: #475569; }
 /* « Couleur automatique » : annule une couleur posee plus haut. */
 .rt-c-defaut { color: var(--text); }
 
-.dark .rt-c-jaune { color: #fbbf24; }
 .dark .rt-c-rouge { color: #f87171; }
+.dark .rt-c-brique { color: #fca5a5; }
+.dark .rt-c-orange { color: #fb923c; }
+.dark .rt-c-ambre { color: #fbbf24; }
+.dark .rt-c-jaune { color: #facc15; }
+.dark .rt-c-olive { color: #a3e635; }
 .dark .rt-c-vert { color: #4ade80; }
+.dark .rt-c-emeraude { color: #34d399; }
+.dark .rt-c-turquoise { color: #2dd4bf; }
+.dark .rt-c-cyan { color: #22d3ee; }
 .dark .rt-c-bleu { color: #7cb0ff; }
+.dark .rt-c-indigo { color: #a5b4fc; }
 .dark .rt-c-violet { color: #c084fc; }
+.dark .rt-c-fuchsia { color: #e879f9; }
+.dark .rt-c-rose { color: #fb7185; }
+.dark .rt-c-marron { color: #d6a06a; }
 .dark .rt-c-gris { color: #a1a1aa; }
+.dark .rt-c-ardoise { color: #94a3b8; }
+
+/* ---------------------------------------------------------------- */
+/* Surlignage                                                        */
+/* ---------------------------------------------------------------- */
 
 .rt-m-jaune,
-.rt-m-vert,
+.rt-m-or,
+.rt-m-orange,
+.rt-m-peche,
+.rt-m-rose,
+.rt-m-lilas,
+.rt-m-lavande,
 .rt-m-bleu,
-.rt-m-rose {
+.rt-m-ciel,
+.rt-m-menthe,
+.rt-m-vert,
+.rt-m-citron,
+.rt-m-gris {
   border-radius: 3px;
   padding: 0 1px;
   color: #241f18;
 }
 .rt-m-jaune { background-color: #fef08a; }
-.rt-m-vert { background-color: #bbf7d0; }
-.rt-m-bleu { background-color: #bfdbfe; }
+.rt-m-or { background-color: #fde68a; }
+.rt-m-orange { background-color: #fed7aa; }
+.rt-m-peche { background-color: #fecaca; }
 .rt-m-rose { background-color: #fbcfe8; }
+.rt-m-lilas { background-color: #e9d5ff; }
+.rt-m-lavande { background-color: #ddd6fe; }
+.rt-m-bleu { background-color: #bfdbfe; }
+.rt-m-ciel { background-color: #bae6fd; }
+.rt-m-menthe { background-color: #a7f3d0; }
+.rt-m-vert { background-color: #bbf7d0; }
+.rt-m-citron { background-color: #d9f99d; }
+.rt-m-gris { background-color: #e5e7eb; }
 /* « Aucun surlignage » : annule un surlignage pose plus haut. */
 .rt-m-aucun { background-color: transparent; color: inherit; padding: 0; }
 
-.dark .rt-m-jaune { background-color: #a3801a; color: #fdf6e3; }
-.dark .rt-m-vert { background-color: #2f6b4a; color: #eafaf1; }
-.dark .rt-m-bleu { background-color: #2f5488; color: #eaf1fb; }
-.dark .rt-m-rose { background-color: #8a4468; color: #fbeaf3; }
+.dark .rt-m-jaune { background-color: #8a6d16; color: #f4efe6; }
+.dark .rt-m-or { background-color: #8a6a15; color: #f4efe6; }
+.dark .rt-m-orange { background-color: #8a5520; color: #f4efe6; }
+.dark .rt-m-peche { background-color: #8a3f3f; color: #f4efe6; }
+.dark .rt-m-rose { background-color: #8a4468; color: #f4efe6; }
+.dark .rt-m-lilas { background-color: #5f3d8a; color: #f4efe6; }
+.dark .rt-m-lavande { background-color: #4a3f8a; color: #f4efe6; }
+.dark .rt-m-bleu { background-color: #2f5488; color: #f4efe6; }
+.dark .rt-m-ciel { background-color: #1f5b7a; color: #f4efe6; }
+.dark .rt-m-menthe { background-color: #24705a; color: #f4efe6; }
+.dark .rt-m-vert { background-color: #2f6b4a; color: #f4efe6; }
+.dark .rt-m-citron { background-color: #55701f; color: #f4efe6; }
+.dark .rt-m-gris { background-color: #4b5563; color: #f4efe6; }
+
+/* ---------------------------------------------------------------- */
+/* Fond des blocs (citation, encadre, tableau...)                    */
+/* ---------------------------------------------------------------- */
+
+.bb-jaune { background-color: #fefce8; border-color: #f0e6c8; }
+.bb-orange { background-color: #fff7ed; border-color: #f3e2d2; }
+.bb-rose { background-color: #fdf2f8; border-color: #f2dced; }
+.bb-rouge { background-color: #fef2f2; border-color: #f3d9d9; }
+.bb-violet { background-color: #faf5ff; border-color: #e8dcf5; }
+.bb-bleu { background-color: #eff6ff; border-color: #d8e4f5; }
+.bb-ciel { background-color: #f0f9ff; border-color: #d5e8f3; }
+.bb-vert { background-color: #f0fdf4; border-color: #d6ecdc; }
+.bb-menthe { background-color: #ecfdf5; border-color: #d2ebe0; }
+.bb-gris { background-color: #f8fafc; border-color: #e2e8f0; }
+
+.dark .bb-jaune { background-color: #2e2a17; border-color: #4a4222; }
+.dark .bb-orange { background-color: #2e2318; border-color: #4a3826; }
+.dark .bb-rose { background-color: #2e1d27; border-color: #4a2f3f; }
+.dark .bb-rouge { background-color: #2e1c1c; border-color: #4a2c2c; }
+.dark .bb-violet { background-color: #261d2e; border-color: #3d2f4a; }
+.dark .bb-bleu { background-color: #1a2231; border-color: #2b3750; }
+.dark .bb-ciel { background-color: #182630; border-color: #273d4a; }
+.dark .bb-vert { background-color: #182a1f; border-color: #274434; }
+.dark .bb-menthe { background-color: #152a24; border-color: #22443a; }
+.dark .bb-gris { background-color: #20232a; border-color: #343943; }
 
 /* Tailles en points, comme dans un traitement de texte. */
 .rt-pt-8 { font-size: 8pt; }
@@ -270,3 +355,10 @@ body {
 .rt-f-roboto { font-family: 'Roboto', 'Segoe UI', Arial, sans-serif; }
 .rt-f-georgia { font-family: Georgia, 'Times New Roman', serif; }
 .rt-f-mono { font-family: ui-monospace, SFMono-Regular, Consolas, Menlo, monospace; }
+
+/* Quand un bloc reçoit une couleur de fond, l'encadré qu'il contient
+   (« à retenir », article de loi, jurisprudence) laisse voir cette couleur
+   au lieu d'empiler la sienne par-dessus. */
+.bb-set [data-block-box] {
+  background-color: transparent;
+}

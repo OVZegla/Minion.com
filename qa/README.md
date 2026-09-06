@@ -47,6 +47,14 @@ moteur de sauvegarde (`src/lib/autosave.ts`).
 * **Export PDF** : bouton présent sur les cours, fiches et méthodes, et
   vérification que l'interface d'édition disparaît en mode impression alors que
   le contenu reste.
+* **Retour à la taille normale** : la hauteur de la zone est mesurée avant, à
+  72 pt, puis de retour à 11 pt. Elle doit revenir à sa valeur de départ et le
+  HTML ne doit garder aucune couche `rt-pt-72`.
+* **Commandes de bloc** : la souris survole un séparateur puis se déplace vers
+  le bouton Supprimer. Avec l'ancien placement, hors du cadre, le bouton
+  disparaissait avant d'être atteint — ce cas échouait.
+* **Couleur de fond d'un bloc** : appliquée, relue en base et après
+  rechargement.
 
 ## Application de bureau
 

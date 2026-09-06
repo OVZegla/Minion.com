@@ -1,12 +1,12 @@
 'use client';
 
 import clsx from 'clsx';
-import { ChevronDown, ChevronUp, Plus, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronDown, ChevronUp, Palette, Plus, Trash2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { BLOCK_MENU, CALLOUT_LABELS, createBlock } from './blocks';
 import { RichText } from './RichText';
 import { RichToolbar } from './RichToolbar';
-import type { CourseBlock } from '@/types';
+import type { BlockBackground, CourseBlock } from '@/types';
 
 const CALLOUT_STYLE: Record<string, string> = {
   remember: 'border-primary-line bg-primary-soft',
@@ -41,12 +41,28 @@ export function BlockEditor({
     <div className="space-y-2">
       <RichToolbar className="no-print mb-1" />
       {blocks.map((block, index) => (
-        <div key={block.id} className="group relative rounded-2xl px-1 py-0.5 hover:bg-surface2/40">
-          <div className="no-print absolute -left-1 top-1 z-10 hidden -translate-x-full gap-0.5 pr-1 group-hover:flex group-focus-within:flex lg:flex-col">
+        <div
+          key={block.id}
+          className={clsx(
+            'group relative rounded-2xl px-1 py-0.5 transition',
+            block.background && block.background !== 'aucun'
+              ? `bb-set bb-${block.background} border border-line`
+              : 'hover:bg-surface2/40',
+          )}
+        >
+          {/*
+            Les commandes du bloc sont posées À L'INTÉRIEUR du cadre. Placées
+            dehors, s'en approcher revenait à quitter la zone survolée : elles
+            disparaissaient avant d'être cliquables, et un séparateur — qui n'a
+            aucun texte où cliquer — devenait impossible à déplacer ou à
+            supprimer.
+          */}
+          <div className="no-print absolute right-1 top-1 z-20 hidden items-center gap-0.5 rounded-xl border border-line bg-surface px-1 py-0.5 shadow-sm group-hover:flex group-focus-within:flex">
             <button
               type="button"
               onClick={() => move(index, -1)}
-              className="btn-ghost h-7 w-7 rounded-lg p-0"
+              disabled={index === 0}
+              className="btn-ghost h-7 w-7 rounded-lg p-0 disabled:opacity-30"
               aria-label="Monter le bloc"
             >
               <ChevronUp size={14} />
@@ -54,11 +70,16 @@ export function BlockEditor({
             <button
               type="button"
               onClick={() => move(index, 1)}
-              className="btn-ghost h-7 w-7 rounded-lg p-0"
+              disabled={index === blocks.length - 1}
+              className="btn-ghost h-7 w-7 rounded-lg p-0 disabled:opacity-30"
               aria-label="Descendre le bloc"
             >
               <ChevronDown size={14} />
             </button>
+            <BackgroundMenu
+              value={block.background ?? 'aucun'}
+              onPick={(background) => update(block.id, { background })}
+            />
             <button
               type="button"
               onClick={() => remove(block.id)}
@@ -73,7 +94,7 @@ export function BlockEditor({
             <BlockBody block={block} update={update} />
           </div>
 
-          <div className="no-print flex justify-end gap-0.5 lg:hidden">
+          <div className="no-print flex flex-wrap justify-end gap-0.5 lg:hidden">
             <button type="button" onClick={() => move(index, -1)} className="btn-ghost h-7 px-2 text-[11px]">
               ↑
             </button>
@@ -122,6 +143,93 @@ export function BlockEditor({
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/** Fonds proposés pour un bloc, avec leur teinte d'aperçu. */
+const BACKGROUNDS: { key: BlockBackground; label: string; preview: string }[] = [
+  { key: 'aucun', label: 'Aucun fond', preview: 'transparent' },
+  { key: 'jaune', label: 'Jaune', preview: '#fefce8' },
+  { key: 'orange', label: 'Orange', preview: '#fff7ed' },
+  { key: 'rose', label: 'Rose', preview: '#fdf2f8' },
+  { key: 'rouge', label: 'Rouge', preview: '#fef2f2' },
+  { key: 'violet', label: 'Violet', preview: '#faf5ff' },
+  { key: 'bleu', label: 'Bleu', preview: '#eff6ff' },
+  { key: 'ciel', label: 'Ciel', preview: '#f0f9ff' },
+  { key: 'vert', label: 'Vert', preview: '#f0fdf4' },
+  { key: 'menthe', label: 'Menthe', preview: '#ecfdf5' },
+  { key: 'gris', label: 'Gris', preview: '#f8fafc' },
+];
+
+/** Choix de la couleur de fond d'un bloc. */
+function BackgroundMenu({
+  value,
+  onPick,
+}: {
+  value: BlockBackground;
+  onPick: (value: BlockBackground) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (!box.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={box}>
+      <button
+        type="button"
+        aria-label="Couleur de fond du bloc"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="btn-ghost h-7 w-7 rounded-lg p-0"
+      >
+        <Palette size={14} />
+      </button>
+      {open ? (
+        <div className="absolute right-0 top-8 z-30 w-[184px] rounded-xl border border-line bg-surface p-2 shadow-lg">
+          <div className="grid grid-cols-5 gap-1.5">
+            {BACKGROUNDS.filter((entry) => entry.key !== 'aucun').map((entry) => (
+              <button
+                key={entry.key}
+                type="button"
+                title={entry.label}
+                aria-label={`Fond ${entry.label}`}
+                aria-pressed={value === entry.key}
+                onClick={() => {
+                  onPick(entry.key);
+                  setOpen(false);
+                }}
+                className={clsx(
+                  'h-7 w-7 rounded-md border transition',
+                  value === entry.key
+                    ? 'border-[color:var(--text)] ring-2 ring-[color:var(--primary)]'
+                    : 'border-line hover:scale-110',
+                )}
+                style={{ background: entry.preview }}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            aria-label="Fond Aucun fond"
+            onClick={() => {
+              onPick('aucun');
+              setOpen(false);
+            }}
+            className="mt-2 w-full rounded-lg px-2 py-1.5 text-left text-[12px] text-muted transition hover:bg-surface2"
+          >
+            Aucun fond
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -289,7 +397,13 @@ function BlockBody({
       );
 
     case 'divider':
-      return <hr className="my-2 border-t border-line" />;
+      // Un séparateur n'a rien où cliquer : on lui donne une zone confortable
+      // pour que ses commandes apparaissent au survol.
+      return (
+        <div className="flex h-8 items-center" aria-label="Séparateur">
+          <hr className="w-full border-t border-line" />
+        </div>
+      );
 
     case 'link':
       return (
@@ -384,7 +498,7 @@ function BlockBody({
 
     case 'callout':
       return (
-        <div className={clsx('rounded-2xl border p-3.5', CALLOUT_STYLE[block.variant])}>
+        <div data-block-box className={clsx('rounded-2xl border p-3.5', CALLOUT_STYLE[block.variant])}>
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-accent">
               {CALLOUT_LABELS[block.variant]}
@@ -409,7 +523,7 @@ function BlockBody({
 
     case 'article':
       return (
-        <div className="rounded-2xl border border-line bg-surface2/50 p-3.5">
+        <div data-block-box className="rounded-2xl border border-line bg-surface2/50 p-3.5">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Article de loi</p>
           <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
             <input
@@ -446,7 +560,7 @@ function BlockBody({
 
     case 'caselaw':
       return (
-        <div className="rounded-2xl border border-line bg-surface2/50 p-3.5">
+        <div data-block-box className="rounded-2xl border border-line bg-surface2/50 p-3.5">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Jurisprudence</p>
           <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
             <input

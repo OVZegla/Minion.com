@@ -74,6 +74,97 @@ export const richMarksStore = {
   },
 };
 
+/* ------------------------------------------------------------------ */
+/* Position du curseur, comptée en caractères                          */
+/* ------------------------------------------------------------------ */
+
+/** Nombre de caractères d'un fragment, un saut de ligne comptant pour un. */
+function textLength(node: Node): number {
+  let total = 0;
+  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let current = walker.nextNode();
+  while (current) {
+    if (current.nodeType === Node.TEXT_NODE) total += current.textContent?.length ?? 0;
+    else if ((current as Element).tagName === 'BR') total += 1;
+    current = walker.nextNode();
+  }
+  return total;
+}
+
+/** Position d'un point du document, en caractères depuis le début du champ. */
+function offsetOf(root: HTMLElement, container: Node, offset: number): number {
+  const range = document.createRange();
+  range.setStart(root, 0);
+  try {
+    range.setEnd(container, offset);
+  } catch {
+    return 0;
+  }
+  return textLength(range.cloneContents());
+}
+
+/** Point du document correspondant à une position en caractères. */
+function pointAt(root: HTMLElement, target: number): { node: Node; offset: number } {
+  let seen = 0;
+  let lastText: Text | null = null;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let current = walker.nextNode();
+  while (current) {
+    if (current.nodeType === Node.TEXT_NODE) {
+      const text = current as Text;
+      if (seen + text.length >= target) return { node: text, offset: target - seen };
+      seen += text.length;
+      lastText = text;
+    } else if ((current as Element).tagName === 'BR') {
+      seen += 1;
+    }
+    current = walker.nextNode();
+  }
+  if (lastText) return { node: lastText, offset: lastText.length };
+  return { node: root, offset: root.childNodes.length };
+}
+
+/**
+ * Remet le contenu du champ dans sa forme canonique, sans bouger le curseur.
+ *
+ * Le navigateur empile les balises : appliquer 72 pt puis revenir à 11 pt
+ * laissait `<span class="rt-pt-72"><span class="rt-pt-11">…</span></span>`.
+ * Le texte redevenait petit mais la hauteur de ligne restait celle du 72,
+ * d'où une zone de saisie anormalement haute. Le contenu enregistré, lui,
+ * était déjà correct : c'est l'affichage qui accumulait des couches.
+ */
+function normalizeField(field: ActiveField): void {
+  const el = field.el;
+  const selection = window.getSelection();
+  let start: number | null = null;
+  let end: number | null = null;
+  if (selection && selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    if (el.contains(range.commonAncestorContainer)) {
+      start = offsetOf(el, range.startContainer, range.startOffset);
+      end = offsetOf(el, range.endContainer, range.endOffset);
+    }
+  }
+
+  const clean = sanitizeRich(el.innerHTML);
+  if (clean === el.innerHTML) return;
+  el.innerHTML = clean;
+
+  if (start === null || end === null || !selection) return;
+  const from = pointAt(el, start);
+  const to = pointAt(el, end);
+  const restored = document.createRange();
+  try {
+    restored.setStart(from.node, from.offset);
+    restored.setEnd(to.node, to.offset);
+  } catch {
+    return;
+  }
+  selection.removeAllRanges();
+  selection.addRange(restored);
+  savedRange = restored.cloneRange();
+}
+
 /** Mémorise la sélection courante si elle est dans le champ actif. */
 function rememberSelection(): void {
   const field = activeField;
@@ -169,12 +260,17 @@ export function toggleRichCommand(command: string): void {
   const field = activeField;
   if (!field) return;
   focusField(field);
+  const selection = window.getSelection();
+  const collapsed = !selection || selection.isCollapsed;
   try {
     document.execCommand('styleWithCSS', false, 'false');
     document.execCommand(command, false);
   } catch {
     return;
   }
+  // Curseur seul : le navigateur retient la mise en forme pour la suite de la
+  // frappe, on ne touche donc pas au contenu.
+  if (!collapsed) normalizeField(field);
   field.emit();
   refreshMarks();
 }
@@ -219,6 +315,7 @@ export function applyRichClass(prefix: 'rt-c-' | 'rt-m-' | 'rt-pt-' | 'rt-f-', k
     selection.removeAllRanges();
     selection.addRange(range);
     savedRange = range.cloneRange();
+    normalizeField(field);
   }
 
   field.emit();
@@ -244,6 +341,7 @@ export function clearRichFormatting(): void {
       span.replaceWith(...Array.from(span.childNodes));
     }
   }
+  normalizeField(field);
   field.emit();
   refreshMarks();
 }

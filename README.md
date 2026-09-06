@@ -161,16 +161,37 @@ styles en dur : elles restent lisibles en mode clair comme en mode sombre.
 `tests/palette-css.test.ts` vérifie que chacune a bien une règle de style dans
 les deux thèmes — une couleur proposée mais non stylée ne ferait rien du tout.
 
-Après chaque action de la barre, le contenu du champ est remis dans sa forme
-canonique sans bouger le curseur (repéré en nombre de caractères). Sans cela le
-navigateur empilait les balises : passer à 72 pt puis revenir à 11 pt laissait
-`<span class="rt-pt-72"><span class="rt-pt-11">…</span></span>`, le texte
-redevenait petit mais la hauteur de ligne restait celle du 72.
+#### Comment la mise en forme est appliquée
+
+Elle n'est pas confiée aux commandes du navigateur, mais calculée sur le
+**modèle de texte** : `applyMarksInRange(html, début, fin, modification)`
+découpe les segments aux bornes de la sélection, applique la modification à
+tous les segments concernés, puis réécrit le contenu. La sélection est repérée
+en nombre de caractères, et rétablie à l'identique après réécriture.
+
+C'est ce qui règle les sélections **mixtes**. `document.execCommand` décide
+d'après le début de la sélection : surligner « un mot déjà surligné + un mot
+vierge » laissait le premier inchangé, et le résultat variait selon la forme du
+contenu. Ici toute la plage reçoit exactement le même traitement, et un bouton
+ne s'allume que si la mise en forme couvre **toute** la sélection — comme dans
+un traitement de texte.
+
+Cela supprime aussi l'empilement de balises : passer à 72 pt puis revenir à
+11 pt laissait `<span class="rt-pt-72"><span class="rt-pt-11">…</span></span>`,
+le texte redevenait petit mais la hauteur de ligne restait celle du 72. Le
+contenu réécrit est toujours canonique, donc le problème ne peut plus
+apparaître.
+
+Seul le curseur seul (sans sélection) passe encore par le navigateur : lui seul
+sait retenir une mise en forme pour la frappe à venir.
 
 ### Blocs d'un cours
 
-Chaque bloc peut recevoir une **couleur de fond** (`background`), utile pour
-faire ressortir une citation ou un encadré. Quand un fond est choisi, l'encadré
+Chaque bloc peut recevoir une **couleur de fond** (`background`) parmi treize
+teintes franches, utile pour faire ressortir une citation ou un encadré.
+`tests/palette-css.test.ts` vérifie qu'elles sont perceptiblement différentes
+les unes des autres : la première version n'utilisait que des teintes très
+pâles, qui se ressemblaient toutes. Quand un fond est choisi, l'encadré
 intérieur devient transparent au lieu d'empiler sa propre couleur.
 
 Les commandes d'un bloc — monter, descendre, colorer, supprimer — sont posées

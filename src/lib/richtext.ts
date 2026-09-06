@@ -455,8 +455,18 @@ function classesFor(marks: Marks): string[] {
 }
 
 function serialize(runs: Run[]): string {
-  let out = '';
+  // Deux segments voisins portant la même mise en forme n'ont pas de raison de
+  // rester séparés : on les recolle avant d'écrire, sinon une simple coloration
+  // laisserait deux balises identiques côte à côte.
+  const merged: Run[] = [];
   for (const run of runs) {
+    const last = merged[merged.length - 1];
+    if (last && sameMarks(last.marks, run.marks)) last.text += run.text;
+    else merged.push({ text: run.text, marks: run.marks });
+  }
+
+  let out = '';
+  for (const run of merged) {
     if (!run.text) continue;
     const body = run.text
       .split('\n')
@@ -500,6 +510,132 @@ export function richToPlain(input: string | null | undefined): string {
 export function plainToRich(input: string | null | undefined): string {
   if (!input) return '';
   return serialize([{ text: input, marks: {} }]);
+}
+
+/* ------------------------------------------------------------------ */
+/* Mise en forme d'une portion de texte                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Modification demandée sur une plage de caractères.
+ * `null` retire la mise en forme au lieu d'en poser une.
+ */
+export interface MarkPatch {
+  b?: boolean;
+  i?: boolean;
+  u?: boolean;
+  s?: boolean;
+  color?: string | null;
+  mark?: string | null;
+  size?: string | null;
+  font?: string | null;
+}
+
+/** Mise en forme d'une plage. Une valeur `null` signifie « pas uniforme ». */
+export interface MarkSummary {
+  b: boolean;
+  i: boolean;
+  u: boolean;
+  s: boolean;
+  color: string | null;
+  mark: string | null;
+  size: string | null;
+  font: string | null;
+}
+
+/** Découpe les segments pour qu'aucun ne chevauche une des bornes. */
+function splitAt(runs: Run[], boundaries: number[]): Run[] {
+  const cuts = [...new Set(boundaries)].sort((a, b) => a - b);
+  const out: Run[] = [];
+  let offset = 0;
+  for (const run of runs) {
+    let text = run.text;
+    let position = offset;
+    for (const cut of cuts) {
+      if (cut <= position || cut >= position + text.length) continue;
+      const index = cut - position;
+      out.push({ text: text.slice(0, index), marks: { ...run.marks } });
+      text = text.slice(index);
+      position = cut;
+    }
+    out.push({ text, marks: { ...run.marks } });
+    offset += run.text.length;
+  }
+  return out;
+}
+
+const FAMILIES = ['color', 'mark', 'size', 'font'] as const;
+const FLAGS = ['b', 'i', 'u', 's'] as const;
+
+/**
+ * Applique une mise en forme à la plage `[start, end)`, comptée en caractères
+ * (un saut de ligne compte pour un).
+ *
+ * Le calcul se fait sur le modèle de texte, pas dans le document affiché : une
+ * sélection à cheval sur des mots déjà mis en forme et des mots vierges reçoit
+ * donc exactement le même traitement partout. Les commandes du navigateur, qui
+ * décidaient d'après le début de la sélection, laissaient au contraire des
+ * portions inchangées.
+ */
+export function applyMarksInRange(
+  html: string,
+  start: number,
+  end: number,
+  patch: MarkPatch,
+): string {
+  if (end <= start) return sanitizeRich(html);
+  const runs = splitAt(toRuns(html), [start, end]);
+  let offset = 0;
+  for (const run of runs) {
+    const from = offset;
+    offset += run.text.length;
+    if (from < start || from >= end) continue;
+    for (const flag of FLAGS) {
+      const wanted = patch[flag];
+      if (wanted === undefined) continue;
+      if (wanted) run.marks[flag] = true;
+      else delete run.marks[flag];
+    }
+    for (const family of FAMILIES) {
+      const wanted = patch[family];
+      if (wanted === undefined) continue;
+      if (wanted === null) delete run.marks[family];
+      else run.marks[family] = wanted;
+    }
+  }
+  return serialize(runs);
+}
+
+/** Ce qui est appliqué sur toute la plage. Sert à allumer les boutons. */
+export function readMarksInRange(html: string, start: number, end: number): MarkSummary {
+  const runs = splitAt(toRuns(html), [start, end]);
+  const inside: Run[] = [];
+  let offset = 0;
+  for (const run of runs) {
+    const from = offset;
+    offset += run.text.length;
+    // Curseur seul : on regarde le segment qui le contient.
+    const matches = end > start ? from >= start && from < end : from <= start && start <= from + run.text.length;
+    if (matches && run.text.length > 0) inside.push(run);
+  }
+  if (inside.length === 0) {
+    return { b: false, i: false, u: false, s: false, color: null, mark: null, size: null, font: null };
+  }
+  const every = (flag: (typeof FLAGS)[number]) => inside.every((run) => run.marks[flag] === true);
+  const common = (family: (typeof FAMILIES)[number]) => {
+    const first = inside[0].marks[family] ?? null;
+    return inside.every((run) => (run.marks[family] ?? null) === first) ? first : null;
+  };
+  return {
+    b: every('b'),
+    i: every('i'),
+    u: every('u'),
+    s: every('s'),
+    color: common('color'),
+    mark: common('mark'),
+    size: common('size'),
+    font: common('font'),
+  };
 }
 
 /** Vrai si le contenu ne comporte aucun caractère visible. */

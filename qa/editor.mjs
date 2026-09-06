@@ -709,6 +709,158 @@ check(
   (await page.evaluate(() => document.querySelectorAll('.bb-bleu').length)) > 0,
 );
 
+/* ---------- 16. Sélection mixte : tout doit être traité pareil ---------- */
+phase = '16-selection-mixte';
+
+await page.goto(courseUrl, { waitUntil: 'networkidle' });
+await page.locator('input[aria-label="Titre du cours"]').waitFor({ state: 'visible', timeout: 20000 });
+await page.waitForTimeout(1000);
+
+const SEL_TEXTE = '[role=textbox][aria-label="Texte"]';
+const htmlDernierBloc = () =>
+  page.evaluate((sel) => {
+    const nodes = document.querySelectorAll(sel);
+    return nodes[nodes.length - 1].innerHTML;
+  }, SEL_TEXTE);
+
+/** Sélectionne du caractère `from` au caractère `to` dans le dernier bloc. */
+const selectionner = async (from, to) => {
+  await page.evaluate(
+    ({ sel, from, to }) => {
+      const nodes = document.querySelectorAll(sel);
+      const el = nodes[nodes.length - 1];
+      el.focus();
+      let seen = 0;
+      let start = null;
+      let end = null;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const len = node.textContent.length;
+        if (start === null && seen + len >= from) start = { node, offset: from - seen };
+        if (end === null && seen + len >= to) end = { node, offset: to - seen };
+        seen += len;
+      }
+      if (!start || !end) return;
+      const range = document.createRange();
+      range.setStart(start.node, start.offset);
+      range.setEnd(end.node, end.offset);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    },
+    { sel: SEL_TEXTE, from, to },
+  );
+  await page.waitForTimeout(250);
+};
+
+const nouveauBlocTexte = async () => {
+  await addBlock('Texte');
+  const zone = page.locator(SEL_TEXTE).last();
+  await zone.click();
+  await page.keyboard.type('alpha beta');
+  await page.waitForTimeout(300);
+};
+
+// Gras sur « mot déjà gras + mot vierge ».
+await nouveauBlocTexte();
+await selectionner(0, 5);
+await page.getByRole('button', { name: 'Gras' }).click();
+await page.waitForTimeout(400);
+await selectionner(0, 10);
+await page.getByRole('button', { name: 'Gras' }).click();
+await page.waitForTimeout(500);
+check('Gras sur une sélection mixte met tout en gras', (await htmlDernierBloc()) === '<b>alpha beta</b>', await htmlDernierBloc());
+
+// Italique sur « mot déjà italique + mot vierge ».
+await nouveauBlocTexte();
+await selectionner(0, 5);
+await page.getByRole('button', { name: 'Italique' }).click();
+await page.waitForTimeout(400);
+await selectionner(0, 10);
+await page.getByRole('button', { name: 'Italique' }).click();
+await page.waitForTimeout(500);
+check('Italique sur une sélection mixte met tout en italique', (await htmlDernierBloc()) === '<i>alpha beta</i>', await htmlDernierBloc());
+
+// Surlignage sur « mot déjà surligné + mot vierge » : le cas qui échouait.
+await nouveauBlocTexte();
+await selectionner(0, 5);
+await page.getByRole('button', { name: 'Surligner' }).click();
+await page.waitForTimeout(250);
+await page.getByRole('button', { name: 'Jaune' }).click();
+await page.waitForTimeout(500);
+await selectionner(0, 10);
+await page.getByRole('button', { name: 'Surligner' }).click();
+await page.waitForTimeout(250);
+await page.getByRole('button', { name: 'Vert' }).click();
+await page.waitForTimeout(600);
+const htmlSurlignage = await htmlDernierBloc();
+check(
+  'Surligner une sélection mixte surligne tout',
+  htmlSurlignage === '<span class="rt-m-vert">alpha beta</span>',
+  htmlSurlignage,
+);
+
+// Police sur des mots de tailles différentes : les tailles doivent survivre.
+await nouveauBlocTexte();
+await selectionner(0, 5);
+await page.getByLabel('Taille').selectOption('24');
+await page.waitForTimeout(500);
+await selectionner(0, 10);
+await page.getByLabel('Police').selectOption('times');
+await page.waitForTimeout(600);
+const htmlPolice = await htmlDernierBloc();
+check(
+  'Changer la police de mots de tailles différentes marche partout',
+  (htmlPolice.match(/rt-f-times/g) || []).length === 2 && htmlPolice.includes('rt-pt-24'),
+  htmlPolice,
+);
+
+// Le bouton ne s'allume que si toute la sélection porte la mise en forme.
+await nouveauBlocTexte();
+await selectionner(0, 5);
+await page.getByRole('button', { name: 'Gras' }).click();
+await page.waitForTimeout(400);
+await selectionner(0, 5);
+check(
+  'Le bouton Gras est allumé sur une sélection entièrement en gras',
+  (await page.getByRole('button', { name: 'Gras' }).getAttribute('aria-pressed')) === 'true',
+);
+await selectionner(0, 10);
+check(
+  'Le bouton Gras est éteint sur une sélection mixte',
+  (await page.getByRole('button', { name: 'Gras' }).getAttribute('aria-pressed')) === 'false',
+);
+
+/* ---------- 17. Fonds de blocs bien distincts ---------- */
+phase = '17-fonds-distincts';
+
+await addBlock('Citation');
+const blocFond = page
+  .locator('.group.relative')
+  .filter({ has: page.locator('[aria-label="Citation"]') })
+  .last();
+const cadreFond = await blocFond.boundingBox();
+await page.mouse.move(cadreFond.x + cadreFond.width / 2, cadreFond.y + 10);
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: 'Couleur de fond du bloc' }).last().click();
+await page.waitForTimeout(300);
+const carresFond = await page.evaluate(() =>
+  [...document.querySelectorAll('button[aria-label^="Fond "]')].map((node) =>
+    getComputedStyle(node).backgroundColor,
+  ),
+);
+check('Au moins dix fonds de bloc sont proposés', carresFond.length >= 10, `${carresFond.length}`);
+check('Les fonds proposés sont tous différents', new Set(carresFond).size === carresFond.length, carresFond.join(' '));
+check('Un fond rouge est proposé', (await page.getByRole('button', { name: 'Fond Rouge' }).count()) > 0);
+await page.getByRole('button', { name: 'Fond Rouge' }).last().click();
+await page.waitForTimeout(1200);
+check(
+  'Le fond rouge est appliqué',
+  ((await blocFond.getAttribute('class')) || '').includes('bb-rouge'),
+);
+
 await browser.close();
 console.log('\n--- ERREURS CONSOLE ---');
 console.log(errors.length ? errors.join('\n') : '(aucune)');

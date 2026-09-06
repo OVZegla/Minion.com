@@ -2,7 +2,17 @@
 
 import clsx from 'clsx';
 import { useCallback, useEffect, useRef } from 'react';
-import { isRichEmpty, sanitizeRich } from '@/lib/richtext';
+import {
+  RICH_COLOR_NONE,
+  RICH_DEFAULT_PT,
+  RICH_FONT_NONE,
+  RICH_MARK_NONE,
+  applyMarksInRange,
+  isRichEmpty,
+  readMarksInRange,
+  sanitizeRich,
+  type MarkPatch,
+} from '@/lib/richtext';
 
 /**
  * Champ de saisie avec mise en forme.
@@ -124,47 +134,6 @@ function pointAt(root: HTMLElement, target: number): { node: Node; offset: numbe
   return { node: root, offset: root.childNodes.length };
 }
 
-/**
- * Remet le contenu du champ dans sa forme canonique, sans bouger le curseur.
- *
- * Le navigateur empile les balises : appliquer 72 pt puis revenir à 11 pt
- * laissait `<span class="rt-pt-72"><span class="rt-pt-11">…</span></span>`.
- * Le texte redevenait petit mais la hauteur de ligne restait celle du 72,
- * d'où une zone de saisie anormalement haute. Le contenu enregistré, lui,
- * était déjà correct : c'est l'affichage qui accumulait des couches.
- */
-function normalizeField(field: ActiveField): void {
-  const el = field.el;
-  const selection = window.getSelection();
-  let start: number | null = null;
-  let end: number | null = null;
-  if (selection && selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    if (el.contains(range.commonAncestorContainer)) {
-      start = offsetOf(el, range.startContainer, range.startOffset);
-      end = offsetOf(el, range.endContainer, range.endOffset);
-    }
-  }
-
-  const clean = sanitizeRich(el.innerHTML);
-  if (clean === el.innerHTML) return;
-  el.innerHTML = clean;
-
-  if (start === null || end === null || !selection) return;
-  const from = pointAt(el, start);
-  const to = pointAt(el, end);
-  const restored = document.createRange();
-  try {
-    restored.setStart(from.node, from.offset);
-    restored.setEnd(to.node, to.offset);
-  } catch {
-    return;
-  }
-  selection.removeAllRanges();
-  selection.addRange(restored);
-  savedRange = restored.cloneRange();
-}
-
 /** Mémorise la sélection courante si elle est dans le champ actif. */
 function rememberSelection(): void {
   const field = activeField;
@@ -189,45 +158,35 @@ function focusField(field: ActiveField): Selection | null {
   return selection;
 }
 
-/** Lit la mise en forme sous le curseur en remontant les parents du champ. */
+/** Bornes de la sélection dans le champ actif, en caractères. */
+function selectionRange(field: ActiveField): { start: number; end: number } | null {
+  if (typeof window === 'undefined') return null;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  if (!field.el.contains(range.commonAncestorContainer)) return null;
+  const a = offsetOf(field.el, range.startContainer, range.startOffset);
+  const b = offsetOf(field.el, range.endContainer, range.endOffset);
+  return { start: Math.min(a, b), end: Math.max(a, b) };
+}
+
+/** Lit la mise en forme de la sélection, à partir du contenu assaini. */
 function readActiveMarks(): ActiveMarks {
   const field = activeField;
-  if (!field || typeof window === 'undefined') return NO_MARKS;
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return NO_MARKS;
-
-  const state = (command: string) => {
-    try {
-      return document.queryCommandState(command);
-    } catch {
-      return false;
-    }
+  if (!field) return NO_MARKS;
+  const range = selectionRange(field);
+  if (!range) return NO_MARKS;
+  const summary = readMarksInRange(sanitizeRich(field.el.innerHTML), range.start, range.end);
+  return {
+    bold: summary.b,
+    italic: summary.i,
+    underline: summary.u,
+    strike: summary.s,
+    color: summary.color,
+    mark: summary.mark,
+    size: summary.size,
+    font: summary.font,
   };
-
-  const marks: ActiveMarks = {
-    bold: state('bold'),
-    italic: state('italic'),
-    underline: state('underline'),
-    strike: state('strikeThrough'),
-    color: null,
-    mark: null,
-    size: null,
-    font: null,
-  };
-
-  let node: Node | null = selection.anchorNode;
-  while (node && node !== field.el) {
-    if (node.nodeType === 1) {
-      for (const name of (node as HTMLElement).classList) {
-        if (marks.color === null && name.startsWith('rt-c-')) marks.color = name.slice(5);
-        else if (marks.mark === null && name.startsWith('rt-m-')) marks.mark = name.slice(5);
-        else if (marks.size === null && name.startsWith('rt-pt-')) marks.size = name.slice(6);
-        else if (marks.font === null && name.startsWith('rt-f-')) marks.font = name.slice(5);
-      }
-    }
-    node = node.parentNode;
-  }
-  return marks;
 }
 
 function refreshMarks() {
@@ -255,95 +214,92 @@ function setActiveField(next: ActiveField | null) {
   notify();
 }
 
-/** Commande simple du navigateur : gras, italique, souligné, barré. */
+/**
+ * Applique une mise en forme à la sélection.
+ *
+ * Le calcul se fait sur le contenu assaini, pas sur le document affiché. Les
+ * commandes du navigateur décidaient d'après le début de la sélection : mettre
+ * en couleur « un mot déjà surligné + un mot vierge » laissait le premier
+ * inchangé. Ici toute la plage reçoit exactement le même traitement.
+ */
+function applyPatch(patch: MarkPatch): void {
+  const field = activeField;
+  if (!field) return;
+  focusField(field);
+  const range = selectionRange(field);
+  if (!range || range.end <= range.start) return;
+
+  const next = applyMarksInRange(
+    sanitizeRich(field.el.innerHTML),
+    range.start,
+    range.end,
+    patch,
+  );
+  field.el.innerHTML = next;
+  restoreRange(field.el, range.start, range.end);
+  field.emit();
+  refreshMarks();
+}
+
+/** Replace la sélection sur une plage de caractères. */
+function restoreRange(el: HTMLElement, start: number, end: number): void {
+  const selection = window.getSelection();
+  if (!selection) return;
+  const from = pointAt(el, start);
+  const to = pointAt(el, end);
+  const range = document.createRange();
+  try {
+    range.setStart(from.node, from.offset);
+    range.setEnd(to.node, to.offset);
+  } catch {
+    return;
+  }
+  selection.removeAllRanges();
+  selection.addRange(range);
+  savedRange = range.cloneRange();
+}
+
+/** Gras, italique, souligné, barré. */
 export function toggleRichCommand(command: string): void {
   const field = activeField;
   if (!field) return;
   focusField(field);
-  const selection = window.getSelection();
-  const collapsed = !selection || selection.isCollapsed;
-  try {
-    document.execCommand('styleWithCSS', false, 'false');
-    document.execCommand(command, false);
-  } catch {
+  const key = ({ bold: 'b', italic: 'i', underline: 'u', strikeThrough: 's' } as const)[
+    command as 'bold' | 'italic' | 'underline' | 'strikeThrough'
+  ];
+  if (!key) return;
+
+  const range = selectionRange(field);
+  if (!range || range.end <= range.start) {
+    // Curseur seul : le navigateur retient la mise en forme pour la frappe
+    // qui suit, ce que le modèle ne sait pas faire.
+    try {
+      document.execCommand('styleWithCSS', false, 'false');
+      document.execCommand(command, false);
+    } catch {
+      return;
+    }
+    field.emit();
+    refreshMarks();
     return;
   }
-  // Curseur seul : le navigateur retient la mise en forme pour la suite de la
-  // frappe, on ne touche donc pas au contenu.
-  if (!collapsed) normalizeField(field);
-  field.emit();
-  refreshMarks();
+
+  const summary = readMarksInRange(sanitizeRich(field.el.innerHTML), range.start, range.end);
+  // Si une partie seulement porte la mise en forme, on l'étend à tout ;
+  // on ne l'enlève que lorsque toute la sélection la porte déjà.
+  applyPatch({ [key]: !summary[key] } as MarkPatch);
 }
 
-/**
- * Applique une classe de mise en forme à la sélection.
- *
- * `execCommand` ne sait pas poser une taille en points ni une classe. On lui
- * fait donc marquer la sélection avec une taille factice — lui seul sait
- * découper proprement une sélection à cheval sur plusieurs éléments — puis on
- * remplace ces marqueurs par nos propres balises.
- */
+/** Couleur, surlignage, taille, police. */
 export function applyRichClass(prefix: 'rt-c-' | 'rt-m-' | 'rt-pt-' | 'rt-f-', key: string): void {
-  const field = activeField;
-  if (!field) return;
-  const selection = focusField(field);
-  if (!selection || selection.rangeCount === 0) return;
-
-  try {
-    document.execCommand('styleWithCSS', false, 'false');
-    document.execCommand('fontSize', false, '7');
-  } catch {
-    return;
-  }
-
-  const created: HTMLElement[] = [];
-  for (const marker of Array.from(field.el.querySelectorAll('font[size="7"]'))) {
-    const span = document.createElement('span');
-    span.className = `${prefix}${key}`;
-    while (marker.firstChild) span.appendChild(marker.firstChild);
-    marker.replaceWith(span);
-    created.push(span);
-  }
-
-  if (created.length > 0) {
-    // La sélection est replacée À L'INTÉRIEUR des balises créées : sans cela la
-    // barre ne verrait pas la mise en forme qu'elle vient d'appliquer.
-    const last = created[created.length - 1];
-    const range = document.createRange();
-    range.setStart(created[0], 0);
-    range.setEnd(last, last.childNodes.length);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    savedRange = range.cloneRange();
-    normalizeField(field);
-  }
-
-  field.emit();
-  refreshMarks();
+  if (prefix === 'rt-c-') applyPatch({ color: key === RICH_COLOR_NONE ? null : key });
+  else if (prefix === 'rt-m-') applyPatch({ mark: key === RICH_MARK_NONE ? null : key });
+  else if (prefix === 'rt-f-') applyPatch({ font: key === RICH_FONT_NONE ? null : key });
+  else applyPatch({ size: key === String(RICH_DEFAULT_PT) ? null : key });
 }
 
 export function clearRichFormatting(): void {
-  const field = activeField;
-  if (!field) return;
-  focusField(field);
-  try {
-    document.execCommand('removeFormat', false);
-  } catch {
-    return;
-  }
-  // removeFormat ne connaît pas nos classes : on dépouille la sélection.
-  const selection = window.getSelection();
-  if (selection && selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    for (const span of Array.from(field.el.querySelectorAll('span'))) {
-      if (!range.intersectsNode(span)) continue;
-      if (![...span.classList].some((name) => name.startsWith('rt-'))) continue;
-      span.replaceWith(...Array.from(span.childNodes));
-    }
-  }
-  normalizeField(field);
-  field.emit();
-  refreshMarks();
+  applyPatch({ b: false, i: false, u: false, s: false, color: null, mark: null, size: null, font: null });
 }
 
 export function RichText({

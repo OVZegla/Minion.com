@@ -138,15 +138,18 @@ export type CourseKind = 'CM' | 'TD' | 'TP' | 'AUTRE';
  */
 export type BlockBackground =
   | 'aucun'
-  | 'jaune'
-  | 'orange'
-  | 'rose'
   | 'rouge'
-  | 'violet'
-  | 'bleu'
-  | 'ciel'
+  | 'orange'
+  | 'jaune'
+  | 'citron'
   | 'vert'
   | 'menthe'
+  | 'turquoise'
+  | 'ciel'
+  | 'bleu'
+  | 'indigo'
+  | 'violet'
+  | 'rose'
   | 'gris';
 
 /** Blocs de l'editeur de cours — contenu structure, jamais du HTML brut */

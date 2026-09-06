@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BLOCK_MENU, CALLOUT_LABELS, createBlock } from './blocks';
 import { RichText } from './RichText';
 import { RichToolbar } from './RichToolbar';
+import { BACKGROUNDS } from './backgrounds';
 import type { BlockBackground, CourseBlock } from '@/types';
 
 const CALLOUT_STYLE: Record<string, string> = {
@@ -147,20 +148,7 @@ export function BlockEditor({
   );
 }
 
-/** Fonds proposés pour un bloc, avec leur teinte d'aperçu. */
-const BACKGROUNDS: { key: BlockBackground; label: string; preview: string }[] = [
-  { key: 'aucun', label: 'Aucun fond', preview: 'transparent' },
-  { key: 'jaune', label: 'Jaune', preview: '#fefce8' },
-  { key: 'orange', label: 'Orange', preview: '#fff7ed' },
-  { key: 'rose', label: 'Rose', preview: '#fdf2f8' },
-  { key: 'rouge', label: 'Rouge', preview: '#fef2f2' },
-  { key: 'violet', label: 'Violet', preview: '#faf5ff' },
-  { key: 'bleu', label: 'Bleu', preview: '#eff6ff' },
-  { key: 'ciel', label: 'Ciel', preview: '#f0f9ff' },
-  { key: 'vert', label: 'Vert', preview: '#f0fdf4' },
-  { key: 'menthe', label: 'Menthe', preview: '#ecfdf5' },
-  { key: 'gris', label: 'Gris', preview: '#f8fafc' },
-];
+
 
 /** Choix de la couleur de fond d'un bloc. */
 function BackgroundMenu({

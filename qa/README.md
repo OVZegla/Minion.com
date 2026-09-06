@@ -54,7 +54,12 @@ moteur de sauvegarde (`src/lib/autosave.ts`).
   le bouton Supprimer. Avec l'ancien placement, hors du cadre, le bouton
   disparaissait avant d'être atteint — ce cas échouait.
 * **Couleur de fond d'un bloc** : appliquée, relue en base et après
-  rechargement.
+  rechargement ; les teintes proposées doivent être toutes différentes.
+* **Sélections mixtes** : gras, italique, surlignage et police appliqués à une
+  sélection qui couvre du texte déjà mis en forme et du texte vierge. Le cas
+  du surlignage échouait — `<span class="rt-m-jaune">alpha</span> beta`
+  devenait `<span class="rt-m-jaune">alpha</span><span class="rt-m-vert"> beta</span>`
+  au lieu de tout surligner.
 
 ## Application de bureau
 

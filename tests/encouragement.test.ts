@@ -4,7 +4,7 @@ import { EMPTY_STATE, pickEncouragement } from '@/lib/encouragement';
 
 describe('phrases d’encouragement', () => {
   it('la liste est complète et sans doublon', () => {
-    expect(ENCOURAGEMENTS.length).toBe(250);
+    expect(ENCOURAGEMENTS.length).toBe(270);
     expect(new Set(ENCOURAGEMENTS).size).toBe(ENCOURAGEMENTS.length);
     expect(ENCOURAGEMENTS.every((phrase) => phrase.trim().length > 0)).toBe(true);
   });

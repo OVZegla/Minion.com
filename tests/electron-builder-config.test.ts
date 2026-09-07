@@ -1,0 +1,57 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import yaml from 'js-yaml';
+import Ajv from 'ajv';
+import { describe, expect, it } from 'vitest';
+
+/**
+ * Valide electron-builder.yml avec le schéma d'electron-builder lui-même.
+ *
+ * Rien en local ne construisait l'installeur : les vérifications de bureau
+ * lancent Electron depuis les sources, jamais electron-builder. Une clé mal
+ * placée passait donc inaperçue jusqu'au build Windows, qui échouait trois
+ * minutes plus tard. C'est arrivé avec `publisherName`, écrit sous `nsis`
+ * alors qu'il appartient à `win`.
+ */
+const require = createRequire(import.meta.url);
+const root = process.cwd();
+
+const config = yaml.load(
+  fs.readFileSync(path.join(root, 'electron-builder.yml'), 'utf8'),
+) as Record<string, unknown>;
+
+const schema = require('app-builder-lib/scheme.json');
+
+describe('electron-builder.yml', () => {
+  it('respecte le schéma d’electron-builder', () => {
+    const ajv = new Ajv({
+      allErrors: true,
+      // Le schéma emploie des mots-clés maison qu'Ajv ne connaît pas.
+      schemaId: 'auto',
+      logger: false,
+      unknownFormats: 'ignore',
+    });
+    ajv.addKeyword('typescript', { valid: true });
+    ajv.addKeyword('customType', { valid: true });
+
+    const validate = ajv.compile(schema);
+    const ok = validate(config);
+    const details = (validate.errors ?? [])
+      .map((error) => `${error.dataPath || '(racine)'} ${error.message}`)
+      .join('\n');
+    expect(ok, details).toBe(true);
+  });
+
+  it('déclare bien l’éditeur au bon endroit', () => {
+    const win = config.win as Record<string, unknown> | undefined;
+    const nsis = config.nsis as Record<string, unknown> | undefined;
+    expect(win?.publisherName, 'publisherName doit être sous « win »').toBeTruthy();
+    expect(nsis?.publisherName, 'publisherName n’existe pas sous « nsis »').toBeUndefined();
+  });
+
+  it('construit bien un installeur et une version portable pour Windows', () => {
+    const targets = (config.win as { target: { target: string }[] }).target;
+    expect(targets.map((entry) => entry.target)).toEqual(['nsis', 'portable']);
+  });
+});

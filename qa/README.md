@@ -69,6 +69,19 @@ sans jamais avoir été saisis là. Les six dimensions PESTEL et les six domaine
 internes sont vérifiés un par un, la répartition est relue dans IndexedDB, et
 l'impression doit reprendre les trois parties tout en masquant les onglets.
 
+## Configuration d'empaquetage
+
+`tests/electron-builder-config.test.ts` valide `electron-builder.yml` avec le
+schéma d'electron-builder lui-même.
+
+Rien en local ne construisait l'installeur : les vérifications de bureau
+lancent Electron depuis les sources, jamais electron-builder. Une clé mal
+placée passait donc inaperçue jusqu'au build Windows, qui échouait trois
+minutes plus tard. C'est arrivé avec `publisherName`, écrit sous `nsis` alors
+qu'il appartient à `win`. Le test reproduit l'erreur exacte du build
+(« .nsis should NOT have additional properties ») en moins d'une seconde, et
+il tourne avec `npm test`, donc avant l'étape de construction en CI.
+
 ## Application de bureau
 
 ```bash

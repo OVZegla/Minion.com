@@ -26,6 +26,10 @@ extraResources:
 asar: true
 
 win:
+  # Nom affiché comme éditeur du programme. Sans signature de code, Windows
+  # continue d'annoncer un éditeur inconnu : c'est le certificat qui atteste
+  # de l'origine, pas ce champ.
+  publisherName: minion.com
   target:
     - target: nsis
       arch: [x64]
@@ -35,10 +39,6 @@ win:
   artifactName: minion.com-${version}-windows-${arch}.${ext}
 
 nsis:
-  # Nom affiché comme éditeur du programme. Sans signature de code, Windows
-  # continue d'annoncer un éditeur inconnu : c'est le certificat qui atteste
-  # de l'origine, pas ce champ.
-  publisherName: minion.com
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true

@@ -22,6 +22,7 @@ import type {
   Semester,
   StudySheet,
   Subject,
+  SwotAnalysis,
   Task,
   UserSettings,
 } from '@/types';
@@ -55,6 +56,7 @@ export class MinionDB extends Dexie {
   caseLaws!: Table<CaseLaw, string>;
   legalTerms!: Table<LegalTerm, string>;
   methodDocs!: Table<MethodDoc, string>;
+  swots!: Table<SwotAnalysis, string>;
   notifications!: Table<AppNotification, string>;
   reminders!: Table<Reminder, string>;
 
@@ -85,6 +87,12 @@ export class MinionDB extends Dexie {
       methodDocs: 'id, template, subjectId, courseId',
       notifications: 'id, read, createdAt, category',
       reminders: 'id, targetType, targetId, fireAt, fired',
+    });
+
+    // Version 2 : ajout du diagnostic d'entreprise (PESTEL + matrice SWOT).
+    // Dexie conserve les donnees existantes ; seule la nouvelle table apparait.
+    this.version(2).stores({
+      swots: 'id, subjectId, courseId, company, updatedAt',
     });
   }
 }
@@ -129,6 +137,7 @@ export const TABLE_NAMES = [
   'caseLaws',
   'legalTerms',
   'methodDocs',
+  'swots',
   'notifications',
   'reminders',
 ] as const;

@@ -8,6 +8,7 @@ import {
   FileText,
   FolderOpen,
   GraduationCap,
+  Grid2x2,
   Layers,
   Layers2,
   ListTodo,
@@ -25,6 +26,7 @@ import {
   InboxForm,
   FlashcardForm,
   RevisionForm,
+  SwotForm,
   SheetForm,
   SubjectForm,
   TaskForm,
@@ -41,6 +43,7 @@ type Kind =
   | 'revision'
   | 'caselaw'
   | 'flashcard'
+  | 'swot'
   | 'subject';
 
 const OPTIONS: { kind: Kind; label: string; icon: typeof ListTodo; hint: string }[] = [
@@ -54,6 +57,7 @@ const OPTIONS: { kind: Kind; label: string; icon: typeof ListTodo; hint: string 
   { kind: 'flashcard', label: 'Flashcard', icon: Layers2, hint: 'Une question, une réponse' },
   { kind: 'document', label: 'Document', icon: FolderOpen, hint: 'Fichier ou lien' },
   { kind: 'caselaw', label: 'Jurisprudence', icon: Scale, hint: 'Décision à retenir' },
+  { kind: 'swot', label: 'Diagnostic', icon: Grid2x2, hint: 'PESTEL et matrice SWOT' },
   { kind: 'subject', label: 'Matière', icon: Layers, hint: 'Nouvelle matière' },
 ];
 
@@ -68,6 +72,7 @@ const TITLES: Record<Kind, string> = {
   revision: 'Session de révision',
   caselaw: 'Nouvelle décision',
   flashcard: 'Nouvelle flashcard',
+  swot: 'Nouveau diagnostic',
   subject: 'Nouvelle matière',
 };
 
@@ -129,6 +134,7 @@ export function QuickAdd() {
           {kind === 'sheet' ? <SheetForm onDone={onDone} /> : null}
           {kind === 'revision' ? <RevisionForm onDone={onDone} /> : null}
           {kind === 'flashcard' ? <FlashcardForm onDone={onDone} /> : null}
+          {kind === 'swot' ? <SwotForm onDone={onDone} /> : null}
           {kind === 'caselaw' ? <CaseLawForm onDone={onDone} /> : null}
           {kind === 'subject' ? <SubjectForm onDone={onDone} /> : null}
         </div>

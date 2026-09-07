@@ -185,6 +185,42 @@ apparaître.
 Seul le curseur seul (sans sélection) passe encore par le navigateur : lui seul
 sait retenir une mise en forme pour la frappe à venir.
 
+### Diagnostic d'entreprise : PESTEL et matrice SWOT
+
+Un outil de management, dans « Outils → Diagnostics ».
+
+Il se remplit en deux temps, et la matrice n'est **jamais saisie à part** :
+
+* **PESTEL** — l'environnement de l'entreprise, en six dimensions : politique,
+  économique, socioculturel, technologique, écologique, légal. Chaque constat
+  est marqué comme jouant *pour* ou *contre* l'entreprise.
+* **Diagnostic interne** — l'entreprise elle-même, en six domaines : ressources
+  humaines, finances, commercial, organisation, production, image. Même
+  principe.
+* **Matrice SWOT** — déduite des deux précédentes :
+
+  | | Favorable | Défavorable |
+  |---|---|---|
+  | **Interne** (l'entreprise) | Forces | Faiblesses |
+  | **Externe** (PESTEL) | Opportunités | Menaces |
+
+Ranger un même constat deux fois, une fois dans le PESTEL et une fois dans le
+SWOT, serait la meilleure façon de les voir diverger : la matrice se contente
+donc de relire les constats. La règle est dans `src/features/swot/matrix.ts` et
+`tests/swot.test.ts` la vérifie sur les quatre combinaisons.
+
+Chaque constat porte une importance (faible, moyen, majeur) qui décide de son
+rang dans la matrice. Un indicateur d'avancement compte les cases explorées :
+douze au total, une case comptant pour remplie dès qu'elle porte un constat.
+Ce n'est pas une note, seulement un repère de ce qui reste à regarder.
+
+L'export PDF reprend **tout le raisonnement** — PESTEL, diagnostic interne puis
+matrice — quelle que soit la vue affichée à l'écran : la matrice seule ne dirait
+pas d'où viennent les constats.
+
+Le diagnostic de démonstration porte sur une entreprise entièrement inventée,
+annoncée comme telle dans son intitulé.
+
 ### Blocs d'un cours
 
 Chaque bloc peut recevoir une **couleur de fond** (`background`) parmi treize
@@ -217,11 +253,11 @@ du texte sont conservées.
 
 ### Modèle
 
-24 entités : `UserSettings`, `AcademicYear`, `Semester`, `Subject`, `Chapter`,
+25 entités : `UserSettings`, `AcademicYear`, `Semester`, `Subject`, `Chapter`,
 `Course`, `Note`, `InboxItem`, `Task` (+ `TaskSubItem` embarqué),
 `CalendarEvent`, `Exam`, `RevisionSession`, `Flashcard`, `StudySheet`,
 `DocumentItem`, `SAE`, `SAETask`, `Grade`, `FocusSession`, `CaseLaw`,
-`LegalTerm`, `MethodDoc`, `AppNotification`, `Reminder`.
+`LegalTerm`, `MethodDoc`, `SwotAnalysis`, `AppNotification`, `Reminder`.
 
 Relations principales :
 

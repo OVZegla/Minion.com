@@ -557,6 +557,66 @@ export interface LegalTerm {
 
 export type MethodTemplate = 'fiche_arret' | 'cas_pratique' | 'dissertation' | 'commentaire';
 
+/* ------------------------------------------------------------------ */
+/* Diagnostic d'entreprise : PESTEL et matrice SWOT                    */
+/* ------------------------------------------------------------------ */
+
+/** Les six dimensions de l'analyse PESTEL — environnement externe. */
+export type PestelDimension =
+  | 'politique'
+  | 'economique'
+  | 'socioculturel'
+  | 'technologique'
+  | 'ecologique'
+  | 'legal';
+
+/** Domaines du diagnostic interne. */
+export type InternalDomain =
+  | 'humain'
+  | 'financier'
+  | 'commercial'
+  | 'organisation'
+  | 'technique'
+  | 'image';
+
+/**
+ * D'ou vient le constat. C'est ce qui decide du quadrant SWOT :
+ * externe + favorable = opportunite, externe + defavorable = menace,
+ * interne + favorable = force, interne + defavorable = faiblesse.
+ */
+export type SwotSide = 'externe' | 'interne';
+
+/** Un constat joue pour ou contre l'entreprise. */
+export type SwotPolarity = 'favorable' | 'defavorable';
+
+export interface SwotItem {
+  id: ID;
+  side: SwotSide;
+  /** dimension PESTEL si externe, domaine si interne */
+  category: PestelDimension | InternalDomain;
+  polarity: SwotPolarity;
+  text: string;
+  /** importance ressentie, de 1 (faible) a 3 (majeure) */
+  weight: 1 | 2 | 3;
+}
+
+export interface SwotAnalysis {
+  id: ID;
+  /** intitule du travail : « Diagnostic de la SARL Untel » */
+  title: string;
+  /** entreprise ou organisation analysee */
+  company: string;
+  subjectId?: ID | null;
+  courseId?: ID | null;
+  /** contexte de l'analyse, en texte enrichi */
+  context?: string;
+  items: SwotItem[];
+  /** synthese personnelle, en texte enrichi */
+  conclusion?: string;
+  createdAt: DateTimeISO;
+  updatedAt: DateTimeISO;
+}
+
 export interface MethodDoc {
   id: ID;
   template: MethodTemplate;

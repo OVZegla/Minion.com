@@ -21,6 +21,7 @@ import type {
   InboxItem,
   LegalTerm,
   MethodDoc,
+  SwotAnalysis,
   Note,
   RevisionSession,
   SAE,
@@ -1035,6 +1036,125 @@ export async function seedDemoData(
     updatedAt: ts,
   }));
 
+  /**
+   * Diagnostic de demonstration. « Les Ateliers Berthier » est une entreprise
+   * entierement inventee : les constats servent a montrer comment PESTEL et
+   * diagnostic interne alimentent la matrice, pas a decrire une societe reelle.
+   */
+  const swots: SwotAnalysis[] = [
+    {
+      id: 'swt_demo_berthier',
+      title: 'Diagnostic des Ateliers Berthier',
+      company: 'Les Ateliers Berthier (entreprise fictive)',
+      subjectId: S('orga').id,
+      courseId: null,
+      context:
+        'Menuiserie artisanale de 18 salariés, créée il y a douze ans, qui vend surtout à des particuliers de la région. Exemple entièrement fictif.',
+      items: [
+        {
+          id: 'swi_demo_1',
+          side: 'externe',
+          category: 'economique',
+          polarity: 'favorable',
+          text: 'Marché de la rénovation en croissance dans la région',
+          weight: 3,
+        },
+        {
+          id: 'swi_demo_2',
+          side: 'externe',
+          category: 'economique',
+          polarity: 'defavorable',
+          text: 'Hausse du prix des matières premières',
+          weight: 3,
+        },
+        {
+          id: 'swi_demo_3',
+          side: 'externe',
+          category: 'ecologique',
+          polarity: 'favorable',
+          text: 'Demande croissante de bois issu de forêts gérées durablement',
+          weight: 2,
+        },
+        {
+          id: 'swi_demo_4',
+          side: 'externe',
+          category: 'legal',
+          polarity: 'defavorable',
+          text: 'Nouvelles obligations de traçabilité des matériaux',
+          weight: 2,
+        },
+        {
+          id: 'swi_demo_5',
+          side: 'externe',
+          category: 'socioculturel',
+          polarity: 'favorable',
+          text: 'Attrait des clients pour l’artisanat local',
+          weight: 2,
+        },
+        {
+          id: 'swi_demo_6',
+          side: 'externe',
+          category: 'technologique',
+          polarity: 'defavorable',
+          text: 'Concurrents équipés de machines à commande numérique',
+          weight: 2,
+        },
+        {
+          id: 'swi_demo_7',
+          side: 'interne',
+          category: 'humain',
+          polarity: 'favorable',
+          text: 'Deux compagnons très expérimentés, savoir-faire rare',
+          weight: 3,
+        },
+        {
+          id: 'swi_demo_8',
+          side: 'interne',
+          category: 'humain',
+          polarity: 'defavorable',
+          text: 'Aucun apprenti formé pour prendre la suite',
+          weight: 3,
+        },
+        {
+          id: 'swi_demo_9',
+          side: 'interne',
+          category: 'financier',
+          polarity: 'defavorable',
+          text: 'Trésorerie tendue, délais de paiement clients longs',
+          weight: 3,
+        },
+        {
+          id: 'swi_demo_10',
+          side: 'interne',
+          category: 'image',
+          polarity: 'favorable',
+          text: 'Très bonne réputation locale, clients qui reviennent',
+          weight: 2,
+        },
+        {
+          id: 'swi_demo_11',
+          side: 'interne',
+          category: 'commercial',
+          polarity: 'defavorable',
+          text: 'Pas de site internet ni de présence en ligne',
+          weight: 2,
+        },
+        {
+          id: 'swi_demo_12',
+          side: 'interne',
+          category: 'technique',
+          polarity: 'defavorable',
+          text: 'Machines vieillissantes, pannes fréquentes',
+          weight: 2,
+        },
+      ],
+      conclusion:
+        'Un savoir-faire reconnu, mais une entreprise fragile sur sa trésorerie et sa transmission. La demande locale et l’intérêt pour le bois durable sont des leviers à saisir avant que les concurrents mieux équipés ne prennent le marché.',
+      createdAt: ts,
+      updatedAt: ts,
+    },
+  ];
+
   const methodDocs: MethodDoc[] = [
     {
       id: newId('mth'),
@@ -1172,6 +1292,7 @@ export async function seedDemoData(
   await db.caseLaws.bulkPut(caseLaws);
   await db.legalTerms.bulkPut(legalTerms);
   await db.methodDocs.bulkPut(methodDocs);
+  await db.swots.bulkPut(swots);
   await db.grades.bulkPut(grades);
   await db.focusSessions.bulkPut(focusSessions);
 

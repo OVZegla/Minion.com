@@ -10,6 +10,7 @@ node qa/smoke.mjs       # toutes les pages répondent, aucune erreur console
 node qa/scenarios.mjs   # les 12 scénarios fonctionnels de bout en bout
 node qa/autosave.mjs    # rien n'est perdu quand on quitte une page en pleine frappe
 node qa/editor.mjs      # éditeur : pas de saut d'écran, mise en forme, flashcards
+node qa/swot.mjs        # diagnostic d'entreprise : PESTEL, interne, matrice
 ```
 
 `smoke.mjs` parcourt les 22 routes et échoue à la moindre erreur console.
@@ -60,6 +61,13 @@ moteur de sauvegarde (`src/lib/autosave.ts`).
   du surlignage échouait — `<span class="rt-m-jaune">alpha</span> beta`
   devenait `<span class="rt-m-jaune">alpha</span><span class="rt-m-vert"> beta</span>`
   au lieu de tout surligner.
+
+`swot.mjs` crée un diagnostic, saisit un constat dans chacune des quatre
+combinaisons (environnement favorable et défavorable, interne favorable et
+défavorable), puis vérifie qu'ils arrivent dans la bonne case de la matrice
+sans jamais avoir été saisis là. Les six dimensions PESTEL et les six domaines
+internes sont vérifiés un par un, la répartition est relue dans IndexedDB, et
+l'impression doit reprendre les trois parties tout en masquant les onglets.
 
 ## Application de bureau
 

@@ -198,6 +198,17 @@ export function useLegalTerms() {
   }, []);
 }
 
+export function useSwots() {
+  return useLiveQuery(async () => {
+    const all = await db.swots.toArray();
+    return all.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }, []);
+}
+
+export function useSwot(id?: string | null) {
+  return useLiveQuery(async () => (id ? db.swots.get(id) : undefined), [id]);
+}
+
 export function useMethodDocs() {
   return useLiveQuery(async () => {
     const rows = await db.methodDocs.toArray();

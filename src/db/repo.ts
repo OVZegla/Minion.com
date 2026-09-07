@@ -14,6 +14,7 @@ import type {
   SAE,
   StudySheet,
   Subject,
+  SwotAnalysis,
   Task,
   UserSettings,
 } from '@/types';
@@ -168,6 +169,49 @@ export async function createChapter(subjectId: ID, title: string, order?: number
   };
   await db.chapters.put(chapter);
   return chapter.id;
+}
+
+/* ------------------- Diagnostic d'entreprise (SWOT) ------------------ */
+
+/** Cree un diagnostic vide. Les constats sont ajoutes ensuite. */
+export async function createSwot(input: {
+  title: string;
+  company: string;
+  subjectId?: ID | null;
+  courseId?: ID | null;
+}): Promise<ID> {
+  const ts = nowISO();
+  const analysis: SwotAnalysis = {
+    id: newId('swt'),
+    title: input.title.trim() || 'Diagnostic d’entreprise',
+    company: input.company.trim(),
+    subjectId: input.subjectId ?? null,
+    courseId: input.courseId ?? null,
+    context: '',
+    items: [],
+    conclusion: '',
+    createdAt: ts,
+    updatedAt: ts,
+  };
+  await db.swots.put(analysis);
+  return analysis.id;
+}
+
+/** Duplique un diagnostic, constats compris. */
+export async function duplicateSwot(id: ID): Promise<ID | null> {
+  const source = await db.swots.get(id);
+  if (!source) return null;
+  const ts = nowISO();
+  const copy: SwotAnalysis = {
+    ...source,
+    id: newId('swt'),
+    title: `${source.title} (copie)`,
+    items: source.items.map((item) => ({ ...item, id: newId('swi') })),
+    createdAt: ts,
+    updatedAt: ts,
+  };
+  await db.swots.put(copy);
+  return copy.id;
 }
 
 /* ---------------------------- Flashcards ---------------------------- */

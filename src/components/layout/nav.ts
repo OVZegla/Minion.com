@@ -7,6 +7,7 @@ import {
   FileText,
   FolderOpen,
   GraduationCap,
+  Grid2x2,
   Home,
   Inbox,
   Layers,
@@ -51,9 +52,10 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Outils juridiques',
+    label: 'Outils',
     items: [
       { href: '/methodes', label: 'Méthodes', icon: BookText },
+      { href: '/swot', label: 'Diagnostics', icon: Grid2x2 },
       { href: '/jurisprudence', label: 'Jurisprudence', icon: Scale },
       { href: '/lexique', label: 'Lexique', icon: SpellCheck },
     ],

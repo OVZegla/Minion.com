@@ -238,7 +238,14 @@ await mobile.keyboard.press('Escape');
 await mobile.waitForTimeout(300);
 await mobile.getByRole('button', { name: 'Ouvrir le menu' }).click();
 await mobile.waitForTimeout(500);
-check('S12 — menu mobile complet', (await mobile.textContent('body')).includes('Outils juridiques'));
+// Le groupe « Outils juridiques » est devenu « Outils » : il contient
+// désormais aussi le diagnostic d'entreprise, qui n'est pas un outil juridique.
+const menuMobile = await mobile.textContent('body');
+check(
+  'S12 — menu mobile complet',
+  menuMobile.includes('Outils') && menuMobile.includes('Méthodes') && menuMobile.includes('Diagnostics'),
+  menuMobile.slice(0, 160),
+);
 
 /* calendrier : vues */
 await goto('/calendrier');

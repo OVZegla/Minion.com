@@ -8,6 +8,7 @@ import {
   createExam,
   createFlashcard,
   createRevisionSession,
+  createSwot,
   createStudySheet,
   createSubject,
   createTask,
@@ -779,6 +780,61 @@ export function FlashcardForm({ onDone }: FormProps) {
           </select>
         </div>
       ) : null}
+      <Actions onDone={onDone} />
+    </form>
+  );
+}
+
+/** Nouveau diagnostic d'entreprise : PESTEL, diagnostic interne, matrice SWOT. */
+export function SwotForm({ onDone }: FormProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [company, setCompany] = useState('');
+  const [title, setTitle] = useState('');
+  const [subjectId, setSubjectId] = useState<string | null>(null);
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        if (!company.trim()) return;
+        const id = await createSwot({
+          title: title.trim() || `Diagnostic de ${company.trim()}`,
+          company,
+          subjectId,
+        });
+        toast('Diagnostic créé');
+        onDone();
+        router.push(`/swot/${id}`);
+      }}
+    >
+      <div>
+        <label className="label" htmlFor="qa-swot-company">
+          Entreprise analysée
+        </label>
+        <input
+          id="qa-swot-company"
+          className="field"
+          placeholder="Ex. la SARL Dubois"
+          value={company}
+          onChange={(event) => setCompany(event.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label className="label" htmlFor="qa-swot-title">
+          Intitulé du travail
+        </label>
+        <input
+          id="qa-swot-title"
+          className="field"
+          placeholder="Diagnostic stratégique (facultatif)"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+        />
+      </div>
+      <SubjectSelect value={subjectId} onChange={setSubjectId} />
       <Actions onDone={onDone} />
     </form>
   );

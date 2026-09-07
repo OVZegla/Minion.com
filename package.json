@@ -16,6 +16,7 @@
     "qa:scenarios": "node qa/scenarios.mjs",
     "qa:autosave": "node qa/autosave.mjs",
     "qa:editor": "node qa/editor.mjs",
+    "qa:swot": "node qa/swot.mjs",
     "desktop:build": "node scripts/build-desktop.mjs",
     "desktop:start": "electron .",
     "desktop:dev": "npm run desktop:build && electron .",

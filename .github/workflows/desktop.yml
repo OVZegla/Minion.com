@@ -46,10 +46,32 @@ jobs:
       - name: Construire l'installeur
         run: npm run dist:win
         env:
-          # Aucune signature de code : le certificat n'est pas nécessaire
-          # pour installer l'application, seulement pour éviter l'écran
-          # SmartScreen au premier lancement.
+          # Signature de code, facultative.
+          #
+          # Sans certificat, le navigateur annonce un « fichier dangereux » au
+          # téléchargement et Windows affiche « Éditeur inconnu » au premier
+          # lancement. C'est le comportement normal pour un programme non signé :
+          # il ne dit rien du contenu du fichier, seulement que personne n'a
+          # attesté de son origine.
+          #
+          # Pour supprimer ces écrans, ajouter deux secrets au dépôt :
+          #   WINDOWS_CERT_BASE64   le fichier .pfx encodé en base64
+          #   WINDOWS_CERT_PASSWORD son mot de passe
+          # Rien d'autre à changer : la signature se fait alors toute seule.
+          CSC_LINK: ${{ secrets.WINDOWS_CERT_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Calculer les empreintes SHA-256
+        shell: pwsh
+        run: |
+          # Permet de vérifier que le fichier téléchargé est bien celui qui a
+          # été construit ici, et qu'il est arrivé entier.
+          Get-ChildItem dist-desktop/*.exe | ForEach-Object {
+            $empreinte = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$empreinte  $($_.Name)"
+          } | Set-Content dist-desktop/SHA256SUMS.txt -Encoding utf8
+          Get-Content dist-desktop/SHA256SUMS.txt
 
       - name: Publier les fichiers construits
         uses: actions/upload-artifact@v4
@@ -58,6 +80,7 @@ jobs:
           path: |
             dist-desktop/*.exe
             dist-desktop/*.exe.blockmap
+            dist-desktop/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
 
@@ -68,4 +91,5 @@ jobs:
           files: |
             dist-desktop/*.exe
             dist-desktop/*.exe.blockmap
+            dist-desktop/SHA256SUMS.txt
           generate_release_notes: true

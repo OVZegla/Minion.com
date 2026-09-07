@@ -320,6 +320,45 @@ utilisable sans réseau une fois la coquille en cache.
 
 ## Application de bureau (Windows, macOS, Linux)
 
+### « Fichier dangereux » au téléchargement
+
+C'est attendu, et cela ne dit rien du contenu du fichier.
+
+L'application n'est pas **signée** : personne n'a payé un certificat pour
+attester de son origine. Le navigateur et Windows le signalent, exactement
+comme ils le feraient pour n'importe quel programme d'un éditeur inconnu.
+Concrètement, trois écrans peuvent apparaître :
+
+1. **Le navigateur** annonce un fichier dangereux et bloque le téléchargement.
+   Dans Chrome ou Edge : ouvrir la liste des téléchargements, puis
+   « Conserver » (ou le menu ⋮ → « Conserver quand même »).
+2. **Windows** peut marquer le fichier comme venant d'Internet. Clic droit sur
+   le fichier → « Propriétés » → cocher « Débloquer » en bas → « Appliquer ».
+3. **SmartScreen** affiche « Windows a protégé votre ordinateur » au premier
+   lancement. Cliquer sur « Informations complémentaires », puis
+   « Exécuter quand même ».
+
+Ces écrans n'apparaissent qu'une fois, à la première installation.
+
+Pour vérifier que le fichier téléchargé est bien celui qui a été construit,
+chaque build publie un fichier `SHA256SUMS.txt` à côté des installeurs. Dans
+PowerShell :
+
+```powershell
+Get-FileHash .\minion.com-1.0.0-windows-x64.exe -Algorithm SHA256
+```
+
+L'empreinte affichée doit être identique à celle du fichier `SHA256SUMS.txt`.
+
+**La seule façon de supprimer ces avertissements** est d'acheter un certificat
+de signature de code (compter 200 à 500 € par an, avec vérification
+d'identité ; un certificat « EV » supprime SmartScreen immédiatement, un
+certificat simple demande de laisser le temps à la réputation de se
+construire). Le build est déjà prêt à l'utiliser : il suffit d'ajouter au
+dépôt les deux secrets `WINDOWS_CERT_BASE64` et `WINDOWS_CERT_PASSWORD`,
+sans rien changer d'autre.
+
+
 minion.com s'installe aussi comme une vraie application, sans navigateur ni
 connexion. L'installeur Windows est un `.exe` classique.
 

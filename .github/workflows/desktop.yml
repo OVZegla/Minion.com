@@ -67,7 +67,7 @@ jobs:
         run: |
           # Permet de vérifier que le fichier téléchargé est bien celui qui a
           # été construit ici, et qu'il est arrivé entier.
-          Get-ChildItem dist-desktop/*.exe | ForEach-Object {
+          Get-ChildItem dist-desktop/*.exe, dist-desktop/*.zip | ForEach-Object {
             $empreinte = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
             "$empreinte  $($_.Name)"
           } | Set-Content dist-desktop/SHA256SUMS.txt -Encoding utf8
@@ -79,6 +79,7 @@ jobs:
           name: minion-com-windows
           path: |
             dist-desktop/*.exe
+            dist-desktop/*.zip
             dist-desktop/*.exe.blockmap
             dist-desktop/SHA256SUMS.txt
           if-no-files-found: error
@@ -90,6 +91,7 @@ jobs:
         with:
           files: |
             dist-desktop/*.exe
+            dist-desktop/*.zip
             dist-desktop/*.exe.blockmap
             dist-desktop/SHA256SUMS.txt
           generate_release_notes: true

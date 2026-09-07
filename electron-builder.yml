@@ -29,20 +29,31 @@ win:
   # Nom affiché comme éditeur du programme. Sans signature de code, Windows
   # continue d'annoncer un éditeur inconnu : c'est le certificat qui atteste
   # de l'origine, pas ce champ.
-  publisherName: minion.com
+  signtoolOptions:
+    publisherName: minion.com
   target:
     - target: nsis
       arch: [x64]
-    - target: portable
+    # Une archive ZIP remplace l'ancien « portable ». Celui-ci était un
+    # exécutable auto-extractible : un antivirus voit un programme qui se
+    # décompresse tout seul dans un dossier temporaire et le met en
+    # quarantaine par principe. Une archive ordinaire ne déclenche rien.
+    - target: zip
       arch: [x64]
   icon: electron/assets/icon.ico
   artifactName: minion.com-${version}-windows-${arch}.${ext}
 
 nsis:
   oneClick: false
+  # Installation pour l'utilisatrice seule, dans son dossier personnel.
   perMachine: false
   allowToChangeInstallationDirectory: true
-  allowElevation: true
+  # Aucune élévation de privilèges n'est nécessaire pour une installation
+  # personnelle. Sans cela, electron-builder embarque « elevate.exe », un
+  # utilitaire d'élévation générique que les antivirus signalent très
+  # régulièrement — alors que l'application ne s'en sert jamais.
+  allowElevation: false
+  packElevateHelper: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: minion.com
@@ -51,9 +62,6 @@ nsis:
   installerHeaderIcon: electron/assets/icon.ico
   deleteAppDataOnUninstall: false
   language: '1036' # français
-
-portable:
-  artifactName: minion.com-${version}-portable.exe
 
 mac:
   target: dmg

@@ -394,6 +394,42 @@ construire). Le build est déjà prêt à l'utiliser : il suffit d'ajouter au
 dépôt les deux secrets `WINDOWS_CERT_BASE64` et `WINDOWS_CERT_PASSWORD`,
 sans rien changer d'autre.
 
+### Un antivirus met un fichier en quarantaine
+
+Un antivirus ne se contente pas de regarder ce que fait un programme : il
+juge aussi sa forme et sa réputation. Un exécutable inconnu, non signé,
+téléchargé par très peu de monde, coche toutes les cases de la suspicion — même
+quand il ne fait rien de particulier.
+
+Le paquet a été allégé de ce qui déclenchait ces mises en quarantaine :
+
+* **`elevate.exe` a été retiré.** electron-builder embarquait cet utilitaire
+  d'élévation de privilèges, générique et signalé très régulièrement par les
+  antivirus. L'installation se fait dans le dossier personnel de
+  l'utilisatrice : aucune élévation n'est nécessaire, l'utilitaire ne servait
+  donc jamais.
+* **L'exécutable « portable » a été remplacé par une archive ZIP.** C'était un
+  programme auto-extractible ; un antivirus voit un exécutable qui se
+  décompresse tout seul dans un dossier temporaire et le bloque par principe.
+  Une archive ordinaire ne déclenche rien.
+
+Il ne reste donc que deux exécutables : l'installeur, et l'application
+elle-même. Le serveur embarqué ne contient aucun binaire natif, uniquement du
+JavaScript.
+
+Si un fichier est malgré tout mis en quarantaine :
+
+1. **Le récupérer** — Avast : `Protection` → `Quarantaine`, sélectionner le
+   fichier, `Restaurer et ajouter une exception`.
+2. **Signaler le faux positif** — c'est gratuit, ça prend deux minutes, et cela
+   corrige le problème pour de bon plutôt que fichier par fichier :
+   <https://www.avast.com/false-positive-file-form.php>. Joindre le fichier et
+   indiquer qu'il s'agit d'une application Electron non signée, construite
+   depuis les sources du dépôt.
+3. **Passer par l'archive ZIP** plutôt que par l'installeur : décompresser le
+   dossier et lancer `minion.com.exe` à l'intérieur. Aucune installation, aucun
+   exécutable auto-extractible, donc bien moins de raisons d'être signalée.
+
 
 minion.com s'installe aussi comme une vraie application, sans navigateur ni
 connexion. L'installeur Windows est un `.exe` classique.

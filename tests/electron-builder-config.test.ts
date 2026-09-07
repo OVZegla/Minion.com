@@ -44,14 +44,28 @@ describe('electron-builder.yml', () => {
   });
 
   it('déclare bien l’éditeur au bon endroit', () => {
-    const win = config.win as Record<string, unknown> | undefined;
+    const win = config.win as Record<string, Record<string, unknown>> | undefined;
     const nsis = config.nsis as Record<string, unknown> | undefined;
-    expect(win?.publisherName, 'publisherName doit être sous « win »').toBeTruthy();
+    // electron-builder 25 attend ce champ sous « win.signtoolOptions » ;
+    // sous « nsis » la configuration est refusée, sous « win » elle est
+    // acceptée mais annoncée comme dépréciée.
+    expect(win?.signtoolOptions?.publisherName, 'publisherName doit être sous « win.signtoolOptions »').toBeTruthy();
+    expect(win?.publisherName, 'publisherName ne doit plus être directement sous « win »').toBeUndefined();
     expect(nsis?.publisherName, 'publisherName n’existe pas sous « nsis »').toBeUndefined();
   });
 
-  it('construit bien un installeur et une version portable pour Windows', () => {
+  it('construit un installeur et une archive, pas un exécutable auto-extractible', () => {
     const targets = (config.win as { target: { target: string }[] }).target;
-    expect(targets.map((entry) => entry.target)).toEqual(['nsis', 'portable']);
+    expect(targets.map((entry) => entry.target)).toEqual(['nsis', 'zip']);
+  });
+
+  it('n’embarque pas l’utilitaire d’élévation', () => {
+    // « elevate.exe » est un utilitaire d'élévation générique, très
+    // régulièrement signalé par les antivirus. Une installation personnelle
+    // n'en a aucun besoin : il ne doit pas se retrouver dans le paquet.
+    const nsis = config.nsis as Record<string, unknown>;
+    expect(nsis.perMachine).toBe(false);
+    expect(nsis.allowElevation).toBe(false);
+    expect(nsis.packElevateHelper).toBe(false);
   });
 });
